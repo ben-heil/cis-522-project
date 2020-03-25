@@ -8,7 +8,6 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import accuracy_score
 from torch.autograd import grad
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -50,7 +49,6 @@ def train_irm(net: nn.Module, train_loaders: list, val_loader: DataLoader, write
     '''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
-    # TODO fix optimizer and loss
     optimizer = optim.Adam(net.parameters(), lr=1e-5)
 
     dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
@@ -146,3 +144,9 @@ if __name__ == '__main__':
     # args = num_epochs, loss_scaling_factor
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--num_epochs', default=100, help='The number of epochs to train')
+    parser.add_argument('--loss_scaling_factor', default=1,
+                        help='The factor the loss is multiplied by before being added to the IRM '
+                        'penalty. A larger factor emphasizes classification accuracy over '
+                        'consistency across environments.')
+    args = parser.parse_args()
