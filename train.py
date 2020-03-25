@@ -52,7 +52,6 @@ def train_irm(net: nn.Module, train_loaders: list, val_loader: DataLoader, write
     net.to(device)
     # TODO fix optimizer and loss
     optimizer = optim.Adam(net.parameters(), lr=1e-5)
-    loss_function = nn.BCEWithLogitsLoss()
 
     dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
 
@@ -64,16 +63,15 @@ def train_irm(net: nn.Module, train_loaders: list, val_loader: DataLoader, write
         train_count = 0
         for env_loader in train_loaders:
             for batch in env_loader:
-                image, labels, ids = batch
+                image, cell_type, _, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device).float()
+                cell_type = cell_type.to(device)
                 train_count += len(labels)
 
-                # Bread and butter pytorch: make predictions, calculate loss and accuracy
-                pred = net(image)
-                loss = loss_function(pred * dummy_w, labels)
+                loss, acc = net.train_forward(image, cell_type, labels)
                 train_raw_loss += loss
-                train_correct += accuracy_score(labels, pred, normalize=False)
+                train_correct += acc * len(labels)
 
             # This penalty is the norm of the gradient of 1 * the loss function.
             # The penalty helps keep the model from ignoring one study to the benefit
@@ -95,15 +93,16 @@ def train_irm(net: nn.Module, train_loaders: list, val_loader: DataLoader, write
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, labels, ids = val_batch
+                images, cell_type, _, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device).float()
+                val_cell_type = cell_type.to(device)
                 val_count += len(labels)
 
-                val_preds = net(val_images)
-                loss = loss_function(val_preds, val_labels)
-                val_loss += loss.item()
-                val_correct += accuracy_score(val_labels, val_preds, normalize=False)
+                with torch.no_grad():
+                    loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
+                    val_loss += loss.item()
+                    val_correct += acc * len(labels)
 
         val_loss = val_loss / val_count
         val_acc = val_correct / val_count
@@ -144,4 +143,6 @@ def train_erm(net: nn.Module, train_loader: DataLoader, writer: SummaryWriter):
 
 
 if __name__ == '__main__':
-    raise NotImplementedError
+    # args = num_epochs, loss_scaling_factor
+
+    parser = argparse.ArgumentParser()
