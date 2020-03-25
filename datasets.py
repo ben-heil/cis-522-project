@@ -4,8 +4,10 @@ import numpy as np
 import sklearn.preprocessing as preprocessing
 from torch.utils.data import Dataset
 
+
 class RecursionDataset(Dataset):
     '''A dataset to process images from the broad image benchmark database'''
+
     def __init__(self, images: np.array, labels: np.array, encoder: preprocessing.LabelEncoder):
         '''Instantiate the dataset object
 
@@ -18,10 +20,14 @@ class RecursionDataset(Dataset):
         encoder:
             The encoder used to encode the image labels
         '''
-        raise NotImplementedError
+
+        self.X = images
+        self.y = labels
+        self.encoder = encoder
+        self.length = len(images)
 
     def __getitem__(self, idx: int):
-        raise NotImplementedError
+        return self.X[idx], self.y[idx]
 
     def __len__(self):
-        raise NotImplementedError
+        return self.length
