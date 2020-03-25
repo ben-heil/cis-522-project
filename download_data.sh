@@ -7,16 +7,7 @@ cd $PROJECTDIR
 mkdir data 2> /dev/null
 
 cd $PROJECTDIR/data
-mkdir stage1_train
-wget -nc https://data.broadinstitute.org/bbbc/BBBC038/stage1_train.zip
-unzip stage1_train.zip -d stage1_train
+mkdir train
+wget -nc https://storage.googleapis.com/rxrx/rxrx1.zip
+unzip rxrx1.zip -d train
 
-mkdir stage1_test.zip
-wget -nc https://data.broadinstitute.org/bbbc/BBBC038/stage1_test.zip
-unzip stage1_test.zip -d stage1_test
-
-mkdir stage1_train_labels
-wget -nc https://data.broadinstitute.org/bbbc/BBBC038/stage1_train_labels.csv
-
-mkdir stage1_solution
-wget -nc https://data.broadinstitute.org/bbbc/BBBC038/stage1_solution.csv
