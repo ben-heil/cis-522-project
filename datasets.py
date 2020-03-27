@@ -26,15 +26,15 @@ class RecursionDataset(Dataset):
 
     def create_img_tensor(self, experiment, plate_num, well):
         numpy_list = []
-        for channel in self.channels:
-            for site in self.sites:
-                img_path = self.create_image_path(
-                    experiment, plate_num, well, site, channel)
-                try:
-                    numpy_list.append(self.load_image_from_path(img_path))
-                except FileNotFoundError: 
-                    print(img_path + "Does not exist")
-                    #some sites and channels do not exist.
+
+        generator_paths = (self.create_image_path(experiment,plate_num, well, site, channel) for channel in self.channels for site in self.sites)
+
+        for img_path in generator_paths:
+            try:
+                numpy_list.append(self.load_image_from_path(img_path))
+            except FileNotFoundError:
+                print(img_path + "Does not exist")
+                #some sites and channels do not exist.
 
         return torch.from_numpy(np.stack(numpy_list))
 
