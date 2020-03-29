@@ -4,6 +4,7 @@ standard neural network trainnig (empirical risk minimization)
 '''
 
 import argparse
+from typing import List
 
 import torch
 import torch.nn as nn
@@ -12,6 +13,8 @@ from torch.autograd import grad
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+
+from models import ModelAndLoss
 
 
 def compute_irm_penalty(loss, dummy_w):
@@ -25,7 +28,7 @@ def compute_irm_penalty(loss, dummy_w):
     return dummy_grad
 
 
-def train_irm(net: nn.Module, train_loaders: list, val_loader: DataLoader, writer: SummaryWriter,
+def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataLoader, writer: SummaryWriter,
               args: argparse.Namespace):
     '''Train the given network using invariant risk minimization. This code is based on my
     implementation of IRM in https://github.com/ben-heil/whistl/, and by extension the original
@@ -107,8 +110,8 @@ def train_irm(net: nn.Module, train_loaders: list, val_loader: DataLoader, write
         train_loss = train_loss / train_count
         train_acc = train_correct / train_count
 
-        train_penalty = train_penalty.item()
-        train_raw_loss = train_raw_loss.item()
+        train_penalty = train_penalty
+        train_raw_loss = train_raw_loss
 
         if writer is not None:
             writer.add_scalar('Loss/train', train_loss, epoch)
@@ -150,3 +153,7 @@ if __name__ == '__main__':
                         'penalty. A larger factor emphasizes classification accuracy over '
                         'consistency across environments.')
     args = parser.parse_args()
+
+    net = ModelAndLoss().to('cuda')
+
+
