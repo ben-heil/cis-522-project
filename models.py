@@ -12,7 +12,7 @@ import torchvision
 
 
 class Model(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes):
         super().__init__()
 
         # Set arguments to match winning defaults
@@ -20,8 +20,9 @@ class Model(nn.Module):
         args.backbone = 'mem-densenet161'
         args.concat_cell_type = True
         # TODO get class number
-        args.classes = 0
+        args.classes = num_classes
         args.embedding_size = 1024
+        args.head_hidden = None
         args.bn_mom = 0.05
 
         kwargs = {}
