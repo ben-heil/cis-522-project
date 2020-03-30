@@ -4,8 +4,11 @@ standard neural network trainnig (empirical risk minimization)
 '''
 
 import argparse
+import os
 from typing import List
 
+import numpy as np
+import sklearn as skl
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,6 +17,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+import datasets
+from datasets import RecursionDataset
 from models import ModelAndLoss
 
 
@@ -64,7 +69,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         train_count = 0
         for env_loader in train_loaders:
             for batch in env_loader:
-                image, cell_type, _, labels = batch
+                image, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device).float()
                 cell_type = cell_type.to(device)
@@ -94,7 +99,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, cell_type, _, labels = val_batch
+                images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device).float()
                 val_cell_type = cell_type.to(device)
@@ -147,6 +152,7 @@ if __name__ == '__main__':
     # args = num_epochs, loss_scaling_factor
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('data_dir', help='The path to the root of the data directory (called rxrx1 by default)')
     parser.add_argument('--num_epochs', default=100, help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
@@ -154,6 +160,28 @@ if __name__ == '__main__':
                         'consistency across environments.')
     args = parser.parse_args()
 
-    net = ModelAndLoss().to('cuda')
+    # data/rxrx1/rxrx1.csv
+
+    train_dir = os.path.join(args.data_dir, 'images', 'train')
+
+    metadata_df = datasets.load_metadata_df(os.path.join(args.data_dir, 'rxrx1.csv'))
+
+    sirnas = metadata_df['sirna'].unique()
+    sirna_encoder = skl.preprocessing.LabelEncoder()
+    sirna_encoder.fit(sirnas)
+
+    net = ModelAndLoss(len(sirnas)).to('cuda')
+
+    dataset1 = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'HEPG2')
+    dataset2 = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'U2OS')
+    val_dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'HUVEC')
+
+    loader1 = DataLoader(dataset1, batch_size=32, shuffle=True)
+    loader2 = DataLoader(dataset2, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=1)
+    
+
+    loaders = [loader1, loader2]
+    train_irm(net, loaders, val_loader, None, args)
 
 
