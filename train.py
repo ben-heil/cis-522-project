@@ -22,6 +22,11 @@ from datasets import RecursionDataset
 from models import ModelAndLoss
 
 
+import traceback
+import warnings
+import sys
+
+
 def compute_irm_penalty(loss, dummy_w):
     '''Calculate the invariance penalty for the classifier. This penalty is the norm of the
     gradient of the loss function multiplied by a dummy classifier with the value 1. This penalty
@@ -70,28 +75,28 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         for env_loader in train_loaders:
             for batch in env_loader:
                 image, cell_type, labels = batch
-                image = image.float().to(device)
-                labels = labels.to(device).float()
-                cell_type = cell_type.to(device)
+                image = image.float().to(device).float()
+                labels = labels.to(device)
+                cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
                 train_count += len(labels)
 
-                loss, acc = net.train_forward(image, cell_type, labels)
-                train_raw_loss += loss
+                optimizer.zero_grad()
+                loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
+                train_raw_loss += loss.item()
                 train_correct += acc * len(labels)
 
-            # This penalty is the norm of the gradient of 1 * the loss function.
-            # The penalty helps keep the model from ignoring one study to the benefit
-            # of the others, and the theoretical basis can be found in the Invariant
-            # Risk Minimization paper
-            penalty = compute_irm_penalty(loss, dummy_w)
-            train_penalty += penalty.item()
+                # This penalty is the norm of the gradient of 1 * the loss function.
+                # The penalty helps keep the model from ignoring one study to the benefit
+                # of the others, and the theoretical basis can be found in the Invariant
+                # Risk Minimization paper
+                penalty = compute_irm_penalty(loss, dummy_w)
+                train_penalty += penalty.item()
 
-            optimizer.zero_grad()
-            # Calculate the gradient of the combined loss function
-            combined_loss = args.loss_scaling_factor * loss + penalty
-            train_loss += combined_loss.item()
-            combined_loss.backward(retain_graph=False)
-            optimizer.step()
+                # Calculate the gradient of the combined loss function
+                combined_loss = args.loss_scaling_factor * loss + penalty
+                train_loss += combined_loss.item()
+                combined_loss.backward(retain_graph=False)
+                optimizer.step()
 
         val_loss = 0
         val_correct = 0
@@ -176,9 +181,9 @@ if __name__ == '__main__':
     dataset2 = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'U2OS')
     val_dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'HUVEC')
 
-    loader1 = DataLoader(dataset1, batch_size=32, shuffle=True)
-    loader2 = DataLoader(dataset2, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=1)
+    loader1 = DataLoader(dataset1, batch_size=2, shuffle=True)
+    loader2 = DataLoader(dataset2, batch_size=2, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=2)
     
 
     loaders = [loader1, loader2]
