@@ -33,7 +33,7 @@ class RecursionDataset(Dataset):
         # Initialize cell type encoders
         self.cell_type_label_encoder = preprocessing.LabelEncoder()
         cell_type_encoded = self.cell_type_label_encoder.fit_transform(self.csv_df['cell_type'])
-        self.cell_type_onehot_encoder = preprocessing.OneHotEncoder()
+        self.cell_type_onehot_encoder = preprocessing.OneHotEncoder(categories='auto')
         self.cell_type_onehot_encoder.fit(cell_type_encoded.reshape(-1, 1))
 
         if cell_type is not None and cell_type.lower() != 'all':
@@ -84,7 +84,7 @@ class RecursionDataset(Dataset):
         cell_type = self.cell_type_onehot_encoder.transform(cell_type)
         cell_type = cell_type.toarray()
 
-        sirna_label = self.sirna_encoder.transform([sirna_label])
+        sirna_label = self.sirna_encoder.transform(sirna_label)
 
         return_x = self.create_img_tensor(experiment, plate_num, well, site)
 
