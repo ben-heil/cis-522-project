@@ -19,7 +19,6 @@ class Model(nn.Module):
         args = SimpleNamespace()
         args.backbone = 'mem-densenet161'
         args.concat_cell_type = True
-        # TODO get class number
         args.classes = num_classes
         args.embedding_size = 1024
         args.head_hidden = None
@@ -92,6 +91,7 @@ class Model(nn.Module):
 
         x = F.adaptive_avg_pool2d(x, (1, 1))
         x = x.view(x.size(0), -1)
+
         if self.concat_cell_type:
             x = torch.cat([x, s], dim=1)
 
@@ -154,21 +154,26 @@ class ArcMarginProduct(nn.Module):
 
 
 class ModelAndLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes):
         super().__init__()
 
-        self.model = Model()
+        self.model = Model(num_classes)
         self.metric_crit = ArcFaceLoss()
         self.crit = DenseCrossEntropy()
 
-    def train_forward(self, x, s, y):
+    def train_forward(self, x, s, y, dummy_w=None):
         embedding = self.model.embed(x, s)
 
         metric_output = self.model.metric_classify(embedding)
         metric_loss = self.metric_crit(metric_output, y)
 
         output = self.model.classify(embedding)
-        loss = self.crit(output, y)
+        loss = None
+        # Allow IRM trainin
+        if dummy_w is not None:
+            loss = self.crit(output * dummy_w, y)
+        else:
+            loss = self.crit(output, y)
 
         acc = (output.max(1)[1] == y.max(1)[1]).float().mean().item()
 
