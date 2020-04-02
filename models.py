@@ -1,17 +1,28 @@
-'''This file contains the model classes for use in predicting cell perturbations'''
+'''This file contains the model classes for use in predicting cell perturbations.
+The code is a modified version of https://github.com/maciej-sypetkowski/kaggle-rcic-1st/blob/master/model.py
+'''
 
-'''The winning solution from the Recursion.AI kaggle competition'''
 import math
+from types import SimpleNamespace
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torchvision
-from torch import nn
-from torch.nn import functional as F
 
 
 class Model(nn.Module):
-    def __init__(self, args):
+    def __init__(self, num_classes):
         super().__init__()
+
+        # Set arguments to match winning defaults
+        args = SimpleNamespace()
+        args.backbone = 'mem-densenet161'
+        args.concat_cell_type = True
+        args.classes = num_classes
+        args.embedding_size = 1024
+        args.head_hidden = None
+        args.bn_mom = 0.05
 
         kwargs = {}
         backbone = args.backbone
@@ -40,13 +51,6 @@ class Model(nn.Module):
                 pretrained_backbone.layer4,
             )
             features_num = pretrained_backbone.fc.in_features
-        elif backbone.startswith('efficientnet'):
-            from efficientnet_pytorch import EfficientNet
-            self.efficientnet = EfficientNet.from_pretrained(backbone)
-            first_conv = nn.Conv2d(6, self.efficientnet._conv_stem.out_channels, kernel_size=3, stride=2, padding=1, bias=False)
-            self.efficientnet._conv_stem = first_conv
-            self.features = self.efficientnet.extract_features
-            features_num = self.efficientnet._conv_head.out_channels
         else:
             raise ValueError('wrong backbone')
 
@@ -87,6 +91,7 @@ class Model(nn.Module):
 
         x = F.adaptive_avg_pool2d(x, (1, 1))
         x = x.view(x.size(0), -1)
+
         if self.concat_cell_type:
             x = torch.cat([x, s], dim=1)
 
@@ -98,39 +103,6 @@ class Model(nn.Module):
 
     def classify(self, embedding):
         return self.head(embedding)
-
-
-class ModelAndLoss(nn.Module):
-    def __init__(self, args):
-        super().__init__()
-
-        self.args = args
-        self.model = Model(args)
-        self.metric_crit = ArcFaceLoss()
-        self.crit = DenseCrossEntropy()
-
-    def train_forward(self, x, s, y):
-        embedding = self.model.embed(x, s)
-
-        metric_output = self.model.metric_classify(embedding)
-        metric_loss = self.metric_crit(metric_output, y)
-
-        output = self.model.classify(embedding)
-        loss = self.crit(output, y)
-
-        acc = (output.max(1)[1] == y.max(1)[1]).float().mean().item()
-
-        coeff = self.args.metric_loss_coeff
-        return loss * (1 - coeff) + metric_loss * coeff, acc
-
-    def eval_forward(self, x, s):
-        embedding = self.model.embed(x, s)
-        output = self.model.classify(embedding)
-        return output
-
-    def embed(self, x, s):
-        return self.model.embed(x, s)
-
 
 class DenseCrossEntropy(nn.Module):
     def forward(self, x, target):
@@ -179,3 +151,39 @@ class ArcMarginProduct(nn.Module):
     def forward(self, features):
         cosine = F.linear(F.normalize(features), F.normalize(self.weight))
         return cosine
+
+
+class ModelAndLoss(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+
+        self.model = Model(num_classes)
+        self.metric_crit = ArcFaceLoss()
+        self.crit = DenseCrossEntropy()
+
+    def train_forward(self, x, s, y, dummy_w=None):
+        embedding = self.model.embed(x, s)
+
+        metric_output = self.model.metric_classify(embedding)
+        metric_loss = self.metric_crit(metric_output, y)
+
+        output = self.model.classify(embedding)
+        loss = None
+        # Allow IRM trainin
+        if dummy_w is not None:
+            loss = self.crit(output * dummy_w, y)
+        else:
+            loss = self.crit(output, y)
+
+        acc = (output.max(1)[1] == y.max(1)[1]).float().sum().item()
+
+        coeff = .2
+        return loss * (1 - coeff) + metric_loss * coeff, acc
+
+    def eval_forward(self, x, s):
+        embedding = self.model.embed(x, s)
+        output = self.model.classify(embedding)
+        return output
+
+    def embed(self, x, s):
+        return self.model.embed(x, s)
