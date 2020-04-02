@@ -5,6 +5,7 @@ standard neural network trainnig (empirical risk minimization)
 
 import argparse
 import os
+import time
 from typing import List
 
 import numpy as np
@@ -66,6 +67,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
 
     dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
 
+    batches = 0
     for epoch in tqdm(range(args.num_epochs)):
         train_correct = 0
         train_loss = 0
@@ -75,15 +77,15 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         for env_loader in train_loaders:
             for batch in env_loader:
                 image, cell_type, labels = batch
-                image = image.float().to(device).float()
-                labels = labels.to(device)
+                image = image.float().to(device)
+                labels = labels.to(device).float()
                 cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
                 train_count += len(labels)
 
                 optimizer.zero_grad()
                 loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
                 train_raw_loss += loss.item()
-                train_correct += acc * len(labels)
+                train_correct += acc
 
                 # This penalty is the norm of the gradient of 1 * the loss function.
                 # The penalty helps keep the model from ignoring one study to the benefit
@@ -98,6 +100,16 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                 combined_loss.backward(retain_graph=False)
                 optimizer.step()
 
+                if batches % 100 == 0:
+                    train_loss = train_loss / train_count
+                    train_raw_loss = train_raw_loss / train_count
+                    train_acc = train_correct / train_count
+
+                    writer.add_scalar('Loss/train', train_loss, batches)
+                    writer.add_scalar('Raw_Loss/train', train_raw_loss, batches)
+                    writer.add_scalar('Acc/train', train_acc, batches)
+                batches += 1
+
         val_loss = 0
         val_correct = 0
         val_count = 0
@@ -107,26 +119,20 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device).float()
-                val_cell_type = cell_type.to(device)
+                val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+
                 val_count += len(labels)
 
                 with torch.no_grad():
                     loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
-                    val_correct += acc * len(labels)
+                    val_correct += acc
 
         val_loss = val_loss / val_count
         val_acc = val_correct / val_count
-        train_loss = train_loss / train_count
-        train_acc = train_correct / train_count
-
-        train_penalty = train_penalty
-        train_raw_loss = train_raw_loss
 
         if writer is not None:
-            writer.add_scalar('Loss/train', train_loss, epoch)
             writer.add_scalar('Loss/val', val_loss, epoch)
-            writer.add_scalar('Acc/train', train_acc, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
     return net
@@ -181,12 +187,13 @@ if __name__ == '__main__':
     dataset2 = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'U2OS')
     val_dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'HUVEC')
 
-    loader1 = DataLoader(dataset1, batch_size=2, shuffle=True)
-    loader2 = DataLoader(dataset2, batch_size=2, shuffle=True)
+    loader1 = DataLoader(dataset1, batch_size=16, shuffle=True)
+    loader2 = DataLoader(dataset2, batch_size=16, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=2)
     
 
+    writer = SummaryWriter('logs/{}'.format(time.time()))
     loaders = [loader1, loader2]
-    train_irm(net, loaders, val_loader, None, args)
+    train_irm(net, loaders, val_loader, writer, args)
 
 

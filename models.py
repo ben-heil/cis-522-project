@@ -175,7 +175,7 @@ class ModelAndLoss(nn.Module):
         else:
             loss = self.crit(output, y)
 
-        acc = (output.max(1)[1] == y.max(1)[1]).float().mean().item()
+        acc = (output.max(1)[1] == y.max(1)[1]).float().sum().item()
 
         coeff = .2
         return loss * (1 - coeff) + metric_loss * coeff, acc
