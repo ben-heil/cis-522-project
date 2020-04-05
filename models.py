@@ -187,3 +187,31 @@ class ModelAndLoss(nn.Module):
 
     def embed(self, x, s):
         return self.model.embed(x, s)
+
+
+class DenseNet(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+
+        self.model = torchvision.models.densenet161(pretrained=True, memory_efficient=True)
+        # Make model work with six channels instead of 3
+        self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
+        # Make model predict the correct number of classes (1000 comes from output class count in ImageNet)
+        self.out_layer = nn.Linear(1000, num_classes)
+        self.loss_fn = DenseCrossEntropy()
+
+    def train_forward(self, x, s, y, dummy_w=None):
+        output = self.out_layer(self.model(x))
+
+        loss = None
+        if dummy_w is not None:
+            loss = self.loss_fn(dummy_w * output, y)
+        else:
+            loss = self.loss_fn(output, y)
+
+        num_correct = (output.max(1)[1] == y.max(1)[1]).float().sum().item()
+        return loss, num_correct
+
+    def eval_forward(self, x, s):
+        output = self.out_layer(self.model(x))
+        return output
