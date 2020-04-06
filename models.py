@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
+from sklearn.metrics import accuracy_score
 
 
 class Model(nn.Module):
@@ -118,7 +119,7 @@ class DenseCrossEntropy(nn.Module):
 class ArcFaceLoss(nn.modules.Module):
     def __init__(self, s=30.0, m=0.5):
         super().__init__()
-        self.crit = DenseCrossEntropy()
+        self.crit = nn.CrossEntropyLoss()
         self.s = s
         self.cos_m = math.cos(m)
         self.sin_m = math.sin(m)
@@ -159,7 +160,7 @@ class ModelAndLoss(nn.Module):
 
         self.model = Model(num_classes)
         self.metric_crit = ArcFaceLoss()
-        self.crit = DenseCrossEntropy()
+        self.crit = nn.CrossEntropyLoss()
 
     def train_forward(self, x, s, y, dummy_w=None):
         embedding = self.model.embed(x, s)
@@ -175,7 +176,7 @@ class ModelAndLoss(nn.Module):
         else:
             loss = self.crit(output, y)
 
-        acc = (output.max(1)[1] == y.max(1)[1]).float().sum().item()
+        acc = accuracy_score(output.max(1)[1].cpu().numpy(), y.squeeze().cpu().numpy(), normalize=False)
 
         coeff = .2
         return loss * (1 - coeff) + metric_loss * coeff, acc
@@ -198,7 +199,7 @@ class DenseNet(nn.Module):
         self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         # Make model predict the correct number of classes (1000 comes from output class count in ImageNet)
         self.out_layer = nn.Linear(1000, num_classes)
-        self.loss_fn = DenseCrossEntropy()
+        self.loss_fn = nn.CrossEntropyLoss()
 
     def train_forward(self, x, s, y, dummy_w=None):
         output = self.out_layer(self.model(x))
@@ -209,7 +210,7 @@ class DenseNet(nn.Module):
         else:
             loss = self.loss_fn(output, y)
 
-        num_correct = (output.max(1)[1] == y.max(1)[1]).float().sum().item()
+        num_correct = accuracy_score(output.max(1)[1].cpu().numpy(), y.squeeze().cpu().numpy(), normalize=False)
         return loss, num_correct
 
     def eval_forward(self, x, s):
