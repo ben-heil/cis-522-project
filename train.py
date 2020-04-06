@@ -20,12 +20,7 @@ from tqdm import tqdm
 
 import datasets
 from datasets import RecursionDataset
-from models import ModelAndLoss
-
-
-import traceback
-import warnings
-import sys
+from models import ModelAndLoss, DenseNet
 
 
 def compute_irm_penalty(loss, dummy_w):
@@ -63,7 +58,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
     '''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
-    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    optimizer = optim.Adam(net.parameters(), lr=1e-4)
 
     dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
 
@@ -78,7 +73,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
             for batch in env_loader:
                 image, cell_type, labels = batch
                 image = image.float().to(device)
-                labels = labels.to(device).float()
+                labels = labels.to(device)
                 cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
                 train_count += len(labels)
 
@@ -110,6 +105,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                     writer.add_scalar('Acc/train', train_acc, batches)
                 batches += 1
 
+
         val_loss = 0
         val_correct = 0
         val_count = 0
@@ -118,7 +114,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
             for val_batch in val_loader:
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
-                val_labels = labels.to(device).float()
+                val_labels = labels.to(device)
                 val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
 
                 val_count += len(labels)
@@ -136,27 +132,6 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
             writer.add_scalar('Acc/val', val_acc, epoch)
 
     return net
-
-def train_erm(net: nn.Module, train_loader: DataLoader, writer: SummaryWriter):
-    '''Train the given network using empirical risk minimization (standard training)
-
-    Arguments
-    ---------
-    net:
-        The network to train
-    train_loader:
-        The data containing all training data and labels
-    val_loader:
-        The dataloader containing the validation dataset
-    writer:
-        The SummaryWriter to write results to
-
-    Returns
-    -------
-    net:
-        The network after training is finished
-    '''
-    raise NotImplementedError
 
 
 if __name__ == '__main__':
@@ -182,6 +157,7 @@ if __name__ == '__main__':
     sirna_encoder.fit(sirnas)
 
     net = ModelAndLoss(len(sirnas)).to('cuda')
+    #net = DenseNet(len(sirnas)).to('cuda')
 
     dataset1 = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'HEPG2')
     dataset2 = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'U2OS')
@@ -190,10 +166,9 @@ if __name__ == '__main__':
     loader1 = DataLoader(dataset1, batch_size=16, shuffle=True)
     loader2 = DataLoader(dataset2, batch_size=16, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=2)
-    
 
-    writer = SummaryWriter('logs/{}'.format(time.time()))
+
+    writer = SummaryWriter('logs/irm{}'.format(time.time()))
     loaders = [loader1, loader2]
+    #train_erm(net, loader1, val_loader, writer, args)
     train_irm(net, loaders, val_loader, writer, args)
-
-
