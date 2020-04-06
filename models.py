@@ -1,14 +1,29 @@
 '''This file contains the model classes for use in predicting cell perturbations.
-The code is a modified version of https://github.com/maciej-sypetkowski/kaggle-rcic-1st/blob/master/model.py
+The code is a modified version of
+https://github.com/maciej-sypetkowski/kaggle-rcic-1st/blob/master/model.py
 '''
 
 import math
 from types import SimpleNamespace
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
+from sklearn.metrics import accuracy_score
+import sklearn.preprocessing as preprocessing
+
+
+def one_hot_encode(labels, num_classes):
+    '''Manually one hot encode labels because sklearn's encoder is tempermental
+    and DenseCrossEntropy wants the labels to be one hot (or pseudolabeled)
+    '''
+    encoded = np.zeros((len(labels), num_classes))
+
+    for index, label in enumerate(labels):
+        encoded[index, label] = 1
+    return torch.FloatTensor(encoded).cuda()
 
 
 class Model(nn.Module):
@@ -119,6 +134,7 @@ class ArcFaceLoss(nn.modules.Module):
     def __init__(self, s=30.0, m=0.5):
         super().__init__()
         self.crit = DenseCrossEntropy()
+
         self.s = s
         self.cos_m = math.cos(m)
         self.sin_m = math.sin(m)
@@ -127,14 +143,15 @@ class ArcFaceLoss(nn.modules.Module):
 
     def forward(self, logits, labels):
         logits = logits.float()
+        encoded_labels = one_hot_encode(labels, logits.shape[-1])
         cosine = logits
         sine = torch.sqrt(1.0 - torch.pow(cosine, 2))
         phi = cosine * self.cos_m - sine * self.sin_m
         phi = torch.where(cosine > self.th, phi, cosine - self.mm)
 
-        output = (labels * phi) + ((1.0 - labels) * cosine)
+        output = (encoded_labels * phi) + ((1.0 - encoded_labels) * cosine)
         output *= self.s
-        loss = self.crit(output, labels)
+        loss = self.crit(output, encoded_labels)
         return loss / 2
 
 
@@ -159,7 +176,7 @@ class ModelAndLoss(nn.Module):
 
         self.model = Model(num_classes)
         self.metric_crit = ArcFaceLoss()
-        self.crit = DenseCrossEntropy()
+        self.crit = nn.CrossEntropyLoss()
 
     def train_forward(self, x, s, y, dummy_w=None):
         embedding = self.model.embed(x, s)
@@ -175,7 +192,7 @@ class ModelAndLoss(nn.Module):
         else:
             loss = self.crit(output, y)
 
-        acc = (output.max(1)[1] == y.max(1)[1]).float().sum().item()
+        acc = accuracy_score(output.max(1)[1].cpu().numpy(), y.squeeze().cpu().numpy(), normalize=False)
 
         coeff = .2
         return loss * (1 - coeff) + metric_loss * coeff, acc
@@ -198,7 +215,7 @@ class DenseNet(nn.Module):
         self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         # Make model predict the correct number of classes (1000 comes from output class count in ImageNet)
         self.out_layer = nn.Linear(1000, num_classes)
-        self.loss_fn = DenseCrossEntropy()
+        self.loss_fn = nn.CrossEntropyLoss()
 
     def train_forward(self, x, s, y, dummy_w=None):
         output = self.out_layer(self.model(x))
@@ -209,7 +226,7 @@ class DenseNet(nn.Module):
         else:
             loss = self.loss_fn(output, y)
 
-        num_correct = (output.max(1)[1] == y.max(1)[1]).float().sum().item()
+        num_correct = accuracy_score(output.max(1)[1].cpu().numpy(), y.squeeze().cpu().numpy(), normalize=False)
         return loss, num_correct
 
     def eval_forward(self, x, s):

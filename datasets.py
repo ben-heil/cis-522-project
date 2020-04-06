@@ -84,7 +84,7 @@ class RecursionDataset(Dataset):
         cell_type = self.cell_type_onehot_encoder.transform(cell_type)
         cell_type = cell_type.toarray()
 
-        sirna_label = self.sirna_encoder.transform(sirna_label)
+        sirna_label = self.sirna_encoder.transform(sirna_label).squeeze()
 
         return_x = self.create_img_tensor(experiment, plate_num, well, site)
 
