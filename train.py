@@ -23,11 +23,6 @@ from datasets import RecursionDataset
 from models import ModelAndLoss, DenseNet
 
 
-import traceback
-import warnings
-import sys
-
-
 def compute_irm_penalty(loss, dummy_w):
     '''Calculate the invariance penalty for the classifier. This penalty is the norm of the
     gradient of the loss function multiplied by a dummy classifier with the value 1. This penalty
@@ -109,7 +104,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                     writer.add_scalar('Raw_Loss/train', train_raw_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
                 batches += 1
-                
+
 
         val_loss = 0
         val_correct = 0
@@ -171,11 +166,9 @@ if __name__ == '__main__':
     loader1 = DataLoader(dataset1, batch_size=16, shuffle=True)
     loader2 = DataLoader(dataset2, batch_size=16, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=2)
-    
+
 
     writer = SummaryWriter('logs/irm{}'.format(time.time()))
     loaders = [loader1, loader2]
     #train_erm(net, loader1, val_loader, writer, args)
     train_irm(net, loaders, val_loader, writer, args)
-
-
