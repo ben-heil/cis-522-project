@@ -1,15 +1,29 @@
 '''This file contains the model classes for use in predicting cell perturbations.
-The code is a modified version of https://github.com/maciej-sypetkowski/kaggle-rcic-1st/blob/master/model.py
+The code is a modified version of
+https://github.com/maciej-sypetkowski/kaggle-rcic-1st/blob/master/model.py
 '''
 
 import math
 from types import SimpleNamespace
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 from sklearn.metrics import accuracy_score
+import sklearn.preprocessing as preprocessing
+
+
+def one_hot_encode(labels, num_classes):
+    '''Manually one hot encode labels because sklearn's encoder is tempermental
+    and DenseCrossEntropy wants the labels to be one hot (or pseudolabeled)
+    '''
+    encoded = np.zeros((len(labels), num_classes))
+
+    for index, label in enumerate(labels):
+        encoded[index, label] = 1
+    return torch.FloatTensor(encoded).cuda()
 
 
 class Model(nn.Module):
@@ -119,7 +133,8 @@ class DenseCrossEntropy(nn.Module):
 class ArcFaceLoss(nn.modules.Module):
     def __init__(self, s=30.0, m=0.5):
         super().__init__()
-        self.crit = nn.CrossEntropyLoss()
+        self.crit = DenseCrossEntropy()
+
         self.s = s
         self.cos_m = math.cos(m)
         self.sin_m = math.sin(m)
@@ -128,14 +143,15 @@ class ArcFaceLoss(nn.modules.Module):
 
     def forward(self, logits, labels):
         logits = logits.float()
+        encoded_labels = one_hot_encode(labels, logits.shape[-1])
         cosine = logits
         sine = torch.sqrt(1.0 - torch.pow(cosine, 2))
         phi = cosine * self.cos_m - sine * self.sin_m
         phi = torch.where(cosine > self.th, phi, cosine - self.mm)
 
-        output = (labels * phi) + ((1.0 - labels) * cosine)
+        output = (encoded_labels * phi) + ((1.0 - encoded_labels) * cosine)
         output *= self.s
-        loss = self.crit(output, labels)
+        loss = self.crit(output, encoded_labels)
         return loss / 2
 
 
