@@ -22,7 +22,7 @@ def one_hot_encode(labels, num_classes):
     encoded = np.zeros((len(labels), num_classes))
 
     for index, label in enumerate(labels):
-        encoded[index, label] = 1
+        encoded[index, int(label.cpu())] = 1
     return torch.FloatTensor(encoded).cuda()
 
 
