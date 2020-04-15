@@ -88,7 +88,6 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
 
                     writer.add_scalar('Loss/train', train_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
-                    break
                 batches += 1
 
 
@@ -109,7 +108,6 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
                     loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
                     val_correct += acc
-                    break
 
         val_loss = val_loss / val_count
         val_acc = val_correct / val_count
