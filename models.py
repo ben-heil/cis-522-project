@@ -232,3 +232,44 @@ class DenseNet(nn.Module):
     def eval_forward(self, x, s):
         output = self.out_layer(self.model(x))
         return output
+
+
+class MultitaskNet(nn.Module):
+    '''This network learns a shared representation between cell types in the form of a Densenet,
+    but learns a seperate classifier head for each cell type
+    '''
+    def __init__(self, num_classes, num_cell_types=3):
+        super().__init__()
+
+        self.model = torchvision.models.densenet161(pretrained=True, memory_efficient=True)
+        # Make model work with six channels instead of 3
+        self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
+        # Make model predict the correct number of classes (1000 comes from output class count in ImageNet)
+        self.out_layers = nn.ModuleList([nn.Linear(1000, num_classes) for i in range(num_cell_types)])
+        self.loss_fn = nn.CrossEntropyLoss()
+
+    def train_forward(self, x, s, y, dummy_w=None):
+        representation = self.model(x)
+
+        # Select classifier based on cell type
+        # Note: this is assuming all items in the batch are the same cell type
+        classifier_index = s[0, :].argmax()
+        output = self.out_layers[classifier_index](representation)
+
+        loss = None
+        if dummy_w is not None:
+            loss = self.loss_fn(dummy_w * output, y)
+        else:
+            loss = self.loss_fn(output, y)
+
+        num_correct = accuracy_score(output.max(1)[1].cpu().numpy(), y.squeeze().cpu().numpy(), normalize=False)
+        return loss, num_correct
+
+    def eval_forward(self, x, s):
+        representation = self.model(x)
+
+        # Select classifier based on cell type
+        # Note: this is assuming all items in the batch are the same cell type
+        classifier_index = s[0, :].argmax()
+        output = self.out_layers[classifier_index](representation)
+        return output
