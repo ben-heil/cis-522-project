@@ -357,7 +357,7 @@ if __name__ == '__main__':
 
     subset_indices = list(range(0, len(combined_train_data), 1000))
 
-    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=True, sampler=SubsetRandomSampler(subset_indices))
+    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
     val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
