@@ -373,8 +373,8 @@ if __name__ == '__main__':
 
     # Initialize netork
     #net = ModelAndLoss(len(sirnas)).to('cuda')
-    #net = DenseNet(len(sirnas)).to('cuda')
-    net = MultitaskNet(len(sirnas)).to('cuda')
+    net = DenseNet(len(sirnas)).to('cuda')
+    # net = MultitaskNet(len(sirnas)).to('cuda')
 
     writer = SummaryWriter('logs/erm{}'.format(time.time()))
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
