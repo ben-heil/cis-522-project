@@ -275,6 +275,8 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
                 writer.add_scalar('Loss/train', train_loss, batches)
                 writer.add_scalar('Acc/train', train_acc, batches)
 
+                print("")
+
             batches += 1
 
         val_loss = 0
@@ -382,4 +384,5 @@ if __name__ == '__main__':
     writer = SummaryWriter('logs/irm{}'.format(time.time()))
     #train_irm(net, loaders, val_loader, writer, args)
     writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
-    train_multitask(net, loaders, val_loader, writer, args)
+    # train_multitask(net, loaders, val_loader, writer, args)
+    train_erm(net, loaders, val_loader, writer, args)
