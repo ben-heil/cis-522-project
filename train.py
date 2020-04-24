@@ -275,7 +275,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
                 writer.add_scalar('Loss/train', train_loss, batches)
                 writer.add_scalar('Acc/train', train_acc, batches)
 
-                print("")
+                print("Epoch : %d, Batch : %d, train accuracy : %f" % (epoch, batch, train_acc))
 
             batches += 1
 
