@@ -253,6 +253,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         train_loss = 0
         train_count = 0
         for batch in train_loader:
+            print(batch)
             image, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
@@ -386,3 +387,7 @@ if __name__ == '__main__':
     writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
     # train_multitask(net, loaders, val_loader, writer, args)
     train_erm(net, loaders, val_loader, writer, args)
+
+
+    # train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
+    #           writer: SummaryWriter, args: argparse.Namespace)
