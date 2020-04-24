@@ -71,7 +71,8 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
                 image, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
-                cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+                cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
                 train_count += len(labels)
 
                 optimizer.zero_grad()
@@ -91,7 +92,6 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
                     writer.add_scalar('Acc/train', train_acc, batches)
                 batches += 1
 
-
         val_loss = 0
         val_correct = 0
         val_count = 0
@@ -101,12 +101,14 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
-                val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
 
                 val_count += len(labels)
 
                 with torch.no_grad():
-                    loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
                     val_correct += acc
 
@@ -160,11 +162,13 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                 image, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
-                cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+                cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
                 train_count += len(labels)
 
                 optimizer.zero_grad()
-                loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
+                loss, acc = net.train_forward(
+                    image, cell_type, labels, dummy_w)
                 train_raw_loss += loss.item()
                 train_correct += acc
 
@@ -187,10 +191,10 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                     train_acc = train_correct / train_count
 
                     writer.add_scalar('Loss/train', train_loss, batches)
-                    writer.add_scalar('Raw_Loss/train', train_raw_loss, batches)
+                    writer.add_scalar('Raw_Loss/train',
+                                      train_raw_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
                 batches += 1
-
 
         val_loss = 0
         val_correct = 0
@@ -201,12 +205,14 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
-                val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
 
                 val_count += len(labels)
 
                 with torch.no_grad():
-                    loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
                     val_correct += acc
 
@@ -252,32 +258,36 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         train_correct = 0
         train_loss = 0
         train_count = 0
-        for batch in train_loader:
-            image, cell_type, labels = batch
-            image = image.float().to(device)
-            labels = labels.to(device)
-            cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
-            train_count += len(labels)
+        for env_loader in train_loader:
+            for batch in env_loader:
+                image, cell_type, labels = batch
+                image = image.float().to(device)
+                labels = labels.to(device)
+                cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+                train_count += len(labels)
 
-            optimizer.zero_grad()
-            loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
+                optimizer.zero_grad()
+                loss, acc = net.train_forward(
+                    image, cell_type, labels, dummy_w)
 
-            train_correct += acc
+                train_correct += acc
 
-            train_loss += loss.item()
-            loss.backward(retain_graph=False)
-            optimizer.step()
+                train_loss += loss.item()
+                loss.backward(retain_graph=False)
+                optimizer.step()
 
-            if batches % 100 == 0:
-                train_loss = train_loss / train_count
-                train_acc = train_correct / train_count
+                if batches % 100 == 0:
+                    train_loss = train_loss / train_count
+                    train_acc = train_correct / train_count
 
-                writer.add_scalar('Loss/train', train_loss, batches)
-                writer.add_scalar('Acc/train', train_acc, batches)
+                    writer.add_scalar('Loss/train', train_loss, batches)
+                    writer.add_scalar('Acc/train', train_acc, batches)
 
-                print("Epoch : %d, Batch : %d, train accuracy : %f" % (epoch, batch, train_acc))
+                    print("Epoch : %d, Batch : %d, train accuracy : %f" %
+                          (epoch, batch, train_acc))
 
-            batches += 1
+                batches += 1
 
         val_loss = 0
         val_correct = 0
@@ -288,12 +298,14 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
-                val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
 
                 val_count += len(labels)
 
                 with torch.no_grad():
-                    loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
                     val_correct += acc
 
@@ -310,7 +322,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
 def get_datasets(args: argparse.Namespace,
                  cell_type: str,
                  sirna_encoder: skl.preprocessing.LabelEncoder
-                ):
+                 ):
     '''Generate train and val RecursionDataset objects for a given cell type'''
     train_dir = os.path.join(args.data_dir, 'images', 'train')
     dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
@@ -318,22 +330,22 @@ def get_datasets(args: argparse.Namespace,
                                sirna_encoder,
                                'train',
                                cell_type
-                              )
+                               )
     data_len = len(dataset)
     train_data, val_data = torch.utils.data.random_split(dataset, (data_len // 10,
                                                                    data_len - data_len // 10
-                                                                  )
-                                                        )
+                                                                   )
+                                                         )
 
     return train_data, val_data
-
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', help='The path to the root of the data directory '
                                          '(called rxrx1 by default)')
-    parser.add_argument('--num_epochs', default=100, help='The number of epochs to train')
+    parser.add_argument('--num_epochs', default=100,
+                        help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
                         'penalty. A larger factor emphasizes classification accuracy over '
@@ -341,25 +353,32 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Create sirna encoder
-    metadata_df = datasets.load_metadata_df(os.path.join(args.data_dir, 'rxrx1.csv'))
+    metadata_df = datasets.load_metadata_df(
+        os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
-    HEPG2_train_data, HEPG2_val_data = get_datasets(args, 'HEPG2', sirna_encoder)
-    HUVEC_train_data, HUVEC_val_data = get_datasets(args, 'HUVEC', sirna_encoder)
+    HEPG2_train_data, HEPG2_val_data = get_datasets(
+        args, 'HEPG2', sirna_encoder)
+    HUVEC_train_data, HUVEC_val_data = get_datasets(
+        args, 'HUVEC', sirna_encoder)
     RPE_train_data, RPE_val_data = get_datasets(args, 'RPE', sirna_encoder)
-    combined_train_data = ConcatDataset([HEPG2_train_data, HUVEC_train_data, RPE_train_data])
+    combined_train_data = ConcatDataset(
+        [HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
 
-    HEPG2_train_loader = DataLoader(HEPG2_train_data, batch_size=16, shuffle=True)
-    HUVEC_train_loader = DataLoader(HUVEC_train_data, batch_size=16, shuffle=True)
+    HEPG2_train_loader = DataLoader(
+        HEPG2_train_data, batch_size=16, shuffle=True)
+    HUVEC_train_loader = DataLoader(
+        HUVEC_train_data, batch_size=16, shuffle=True)
     RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=True)
 
     subset_indices = list(range(0, len(combined_train_data), 1000))
 
-    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+    combined_train_loader = DataLoader(
+        combined_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
     val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
@@ -369,9 +388,8 @@ if __name__ == '__main__':
                                  sirna_encoder,
                                  'train',
                                  'U2OS'
-                                )
+                                 )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
-
 
     # Initialize netork
     #net = ModelAndLoss(len(sirnas)).to('cuda')
@@ -385,8 +403,7 @@ if __name__ == '__main__':
     #train_irm(net, loaders, val_loader, writer, args)
     writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
     # train_multitask(net, loaders, val_loader, writer, args)
-    train_irm(net, loaders, val_loader, writer, args)
-
+    train_erm(net, loaders, val_loader, writer, args)
 
     # train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
     #           writer: SummaryWriter, args: argparse.Namespace)
