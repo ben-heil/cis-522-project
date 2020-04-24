@@ -359,7 +359,7 @@ if __name__ == '__main__':
 
     subset_indices = list(range(0, len(combined_train_data), 1000))
 
-    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False)
+    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
     val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
@@ -385,7 +385,7 @@ if __name__ == '__main__':
     #train_irm(net, loaders, val_loader, writer, args)
     writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
     # train_multitask(net, loaders, val_loader, writer, args)
-    train_erm(net, loaders, val_loader, writer, args)
+    train_irm(net, loaders, val_loader, writer, args)
 
 
     # train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
