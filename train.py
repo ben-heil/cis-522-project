@@ -398,12 +398,11 @@ if __name__ == '__main__':
 
     writer = SummaryWriter('logs/erm{}'.format(time.time()))
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
-    #train_erm(net, combined_train_loader, val_loader, writer, args)
+    train_erm(net, combined_train_loader, val_loader, writer, args)
     writer = SummaryWriter('logs/irm{}'.format(time.time()))
     #train_irm(net, loaders, val_loader, writer, args)
     writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
     # train_multitask(net, loaders, val_loader, writer, args)
-    train_erm(net, loaders, val_loader, writer, args)
 
     # train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
     #           writer: SummaryWriter, args: argparse.Namespace)
