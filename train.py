@@ -274,7 +274,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             train_correct += acc
 
             train_loss += loss.item()
-            loss.backward(retain_graph=False)
+            loss.backward() #modification here
             optimizer.step()
 
             if batches % 100 == 0:
