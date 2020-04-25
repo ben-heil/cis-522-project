@@ -258,7 +258,9 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         train_correct = 0
         train_loss = 0
         train_count = 0
+        print("test 1")
         for batch in train_loader:
+            print("test 2")
             image, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
@@ -291,7 +293,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         val_correct = 0
         val_count = 0
         # Speed up validation by telling torch not to worry about computing gradients
-        print ("test")
+        print("test 5")
 
         with torch.no_grad():
             for val_batch in val_loader:
