@@ -357,9 +357,7 @@ if __name__ == '__main__':
     HUVEC_train_loader = DataLoader(HUVEC_train_data, batch_size=16, shuffle=True)
     RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=True)
 
-    subset_indices = list(range(0, len(combined_train_data), 1000))
-
-    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False)
     val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
