@@ -55,6 +55,9 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
     net:
         The network after training is finished
     '''
+    print("train loader length {}".format(len(train_loaders)))
+    print("Val loader length {}".format(len(val_loader)))
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
@@ -144,6 +147,9 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
     net:
         The network after training is finished
     '''
+    print("train loader length {}".format(len(train_loaders)))
+    print("Val loader length {}".format(len(val_loader)))
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
@@ -194,6 +200,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                     writer.add_scalar('Raw_Loss/train',
                                       train_raw_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
+                    print("Epoch : %d, Batches : %d, train accuracy : %f" % (epoch, batches, train_acc))
                 batches += 1
 
         val_loss = 0
@@ -225,6 +232,16 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
 
     return net
 
+def save_checkpoint(model, optimizer, batch_num, base_name):
+    checkpoint = {
+        'model': model,
+        'state_dict': model.state_dict(),
+        'optimizer' : optimizer.state_dict()
+    }
+
+    save_name = "saved_models/{}_{}.pth".format(base_name, batch_num)
+    torch.save(checkpoint, save_name)
+
 
 def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
               writer: SummaryWriter, args: argparse.Namespace):
@@ -254,13 +271,15 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
     dummy_w = None
 
     batches = 0
+    print("train loader length {}".format(len(train_loader)))
+    print("Val loader length {}".format(len(val_loader)))
     for epoch in tqdm(range(args.num_epochs)):
         train_correct = 0
         train_loss = 0
         train_count = 0
-        print("test 1")
+
         for batch in train_loader:
-            print("test 2")
+
             image, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
@@ -269,13 +288,15 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             train_count += len(labels)
 
             optimizer.zero_grad()
+
             loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
 
             train_correct += acc
 
             train_loss += loss.item()
-            loss.backward() #modification here
+            loss.backward(retain_graph=False) #modification here
             optimizer.step()
+
 
             if batches % 100 == 0:
                 train_loss = train_loss / train_count
@@ -287,22 +308,31 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
                 print("Epoch : %d, Batches : %d, train accuracy : %f" %
                       (epoch, batches, train_acc))
 
+            if batches % 1000 == 0:
+                save_checkpoint(net, optimizer, batches, "train_erm_densenet_test")
+
             batches += 1
 
         val_loss = 0
         val_correct = 0
         val_count = 0
         # Speed up validation by telling torch not to worry about computing gradients
-        print("test 5")
+
 
         with torch.no_grad():
+            print("validation")
             for val_batch in val_loader:
+                
+                if (val_count % 100 == 0):
+                    print("val batch {}".format(val_count))
+
+
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(
                     device).float().view(-1, cell_type.size(-1))
-                print("test")
+
                 val_count += len(labels)
 
                 with torch.no_grad():
@@ -318,6 +348,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
+    save_checkpoint(net, optimizer, batches, "train_erm_densenet_final_test")
     return net
 
 
@@ -334,10 +365,12 @@ def get_datasets(args: argparse.Namespace,
                                cell_type
                                )
     data_len = len(dataset)
-    train_data, val_data = torch.utils.data.random_split(dataset, (data_len // 10,
-                                                                   data_len - data_len // 10
+    train_data, val_data = torch.utils.data.random_split(dataset, (data_len - data_len // 10,
+                                                                    data_len // 10
                                                                    )
                                                          )
+
+    print(len(train_data), len(val_data))
 
     return train_data, val_data
 
@@ -346,8 +379,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', help='The path to the root of the data directory '
                                          '(called rxrx1 by default)')
-    parser.add_argument('--num_epochs', default=100,
-                        help='The number of epochs to train')
+    parser.add_argument('--num_epochs', default=100, help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
                         'penalty. A larger factor emphasizes classification accuracy over '
@@ -355,31 +387,30 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Create sirna encoder
-    metadata_df = datasets.load_metadata_df(
-        os.path.join(args.data_dir, 'rxrx1.csv'))
+    metadata_df = datasets.load_metadata_df(os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
-    HEPG2_train_data, HEPG2_val_data = get_datasets(
-        args, 'HEPG2', sirna_encoder)
-    HUVEC_train_data, HUVEC_val_data = get_datasets(
-        args, 'HUVEC', sirna_encoder)
+    HEPG2_train_data, HEPG2_val_data = get_datasets(args, 'HEPG2', sirna_encoder)
+    HUVEC_train_data, HUVEC_val_data = get_datasets(args, 'HUVEC', sirna_encoder)
     RPE_train_data, RPE_val_data = get_datasets(args, 'RPE', sirna_encoder)
-    combined_train_data = ConcatDataset(
-        [HEPG2_train_data, HUVEC_train_data, RPE_train_data])
+    combined_train_data = ConcatDataset([HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
 
-    HEPG2_train_loader = DataLoader(
-        HEPG2_train_data, batch_size=16, shuffle=True)
-    HUVEC_train_loader = DataLoader(
-        HUVEC_train_data, batch_size=16, shuffle=True)
-    RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=True)
+    subset_indices = list(range(0, len(val_data), 100))
 
-    combined_train_loader = DataLoader(
-        combined_train_data, batch_size=16, shuffle=False)
-    val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
+    HEPG2_train_loader = DataLoader(HEPG2_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+    HUVEC_train_loader = DataLoader(HUVEC_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+    RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+
+
+
+    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+
+    
+    val_loader = DataLoader(val_data, batch_size=2, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
 
     # Create test set
     train_dir = os.path.join(args.data_dir, 'images', 'train')
@@ -388,15 +419,14 @@ if __name__ == '__main__':
                                  sirna_encoder,
                                  'train',
                                  'U2OS'
-                                 )
+                                )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
+
     # Initialize netork
-    #net = ModelAndLoss(len(sirnas)).to('cuda')
+    # net = ModelAndLoss(len(sirnas)).to('cuda')
     net = DenseNet(len(sirnas)).to('cuda')
     # net = MultitaskNet(len(sirnas)).to('cuda')
-
-    print(net)
 
     writer = SummaryWriter('logs/erm{}'.format(time.time()))
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
@@ -406,5 +436,5 @@ if __name__ == '__main__':
     writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
     # train_multitask(net, loaders, val_loader, writer, args)
 
-    # train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
-    #           writer: SummaryWriter, args: argparse.Namespace)
+
+

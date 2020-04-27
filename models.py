@@ -211,6 +211,7 @@ class DenseNet(nn.Module):
         super().__init__()
 
         self.model = torchvision.models.densenet161(pretrained=True, memory_efficient=True)
+
         # Make model work with six channels instead of 3
         self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         # Make model predict the correct number of classes (1000 comes from output class count in ImageNet)
@@ -218,7 +219,12 @@ class DenseNet(nn.Module):
         self.loss_fn = nn.CrossEntropyLoss()
 
     def train_forward(self, x, s, y, dummy_w=None):
-        output = self.out_layer(self.model(x))
+
+        # print(self.model)
+        har =self.model(x)
+
+        output = self.out_layer(har)
+
 
         loss = None
         if dummy_w is not None:

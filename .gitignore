@@ -1,2 +1,5 @@
 data/*
 rxrx1/*
+log/*
+saved_models/*
+*.pth
