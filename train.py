@@ -292,7 +292,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
                       (epoch, batches, train_acc))
 
             if batches % 1000 == 0:
-                save_checkpoint(net, optimizer, batches, "train_erm_densenet_test_continued")
+                save_checkpoint(net, optimizer, batches, "train_erm_kaggle_continued")
 
             batches += 1
 
@@ -331,7 +331,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
-    save_checkpoint(net, optimizer, batches, "train_erm_densenet_test_continued")
+    save_checkpoint(net, optimizer, batches, "train_erm_kaggle_continued")
     return net
 
 
@@ -536,9 +536,11 @@ if __name__ == '__main__':
 
 
     # Initialize netork
-    # net = ModelAndLoss(len(sirnas)).to('cuda')
-    net = DenseNet(len(sirnas)).to('cuda')
+    net = ModelAndLoss(len(sirnas)).to('cuda')
+    # net = DenseNet(len(sirnas)).to('cuda')
     # net = MultitaskNet(len(sirnas)).to('cuda')
+
+    print("running model and loss")
 
 
 
@@ -552,13 +554,13 @@ if __name__ == '__main__':
     ##Unloaded
     # train_erm(net, combined_train_loader, val_loader, writer, args)
     # writer = SummaryWriter('logs/irm{}'.format(est_time))
-    #train_irm(net, loaders, val_loader, writer, args)
+    # train_irm(net, loaders, val_loader, writer, args)
     # writer = SummaryWriter('logs/multitask_{}'.format(est_time))
     # train_multitask(net, loaders, val_loader, writer, args)
 
     ###load model changes
     optimizer = optim.Adam(net.parameters(), lr=1e-5)
-    net_loaded, optimizer_loaded = load_model_optimizer(net, optimizer, 'saved_models/train_erm_densenet_test_25000.pth')
+    net_loaded, optimizer_loaded = load_model_optimizer(net, optimizer, 'saved_models/train_erm_densenet_test_29000.pth')
     train_erm_load_optimizer(net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
 
 
