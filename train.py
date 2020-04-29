@@ -245,6 +245,97 @@ def save_checkpoint(model, optimizer, batch_num, base_name):
     save_name = "saved_models/{}_{}.pth".format(base_name, batch_num)
     torch.save(checkpoint, save_name)
 
+def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader, writer: SummaryWriter, args: argparse.Namespace, optimizer: optim.Adam):
+    '''adds optimizer argument that is loaded prior'''
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+    # optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    # dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device) # dummy = 1
+    dummy_w = None
+
+    batches = 0
+    print("train loader length {}".format(len(train_loader)))
+    print("Val loader length {}".format(len(val_loader)))
+    for epoch in tqdm(range(args.num_epochs)):
+        train_correct = 0
+        train_loss = 0
+        train_count = 0
+
+        for batch in train_loader:
+
+            image, cell_type, labels = batch
+            image = image.float().to(device)
+            labels = labels.to(device)
+            cell_type = cell_type.to(
+                device).float().view(-1, cell_type.size(-1))
+            train_count += len(labels)
+
+            optimizer.zero_grad()
+
+            loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
+
+            train_correct += acc
+
+            train_loss += loss.item()
+            loss.backward(retain_graph=False) #modification here
+            optimizer.step()
+
+
+            if batches % 100 == 0:
+                train_loss = train_loss / train_count
+                train_acc = train_correct / train_count
+
+                writer.add_scalar('Loss/train', train_loss, batches)
+                writer.add_scalar('Acc/train', train_acc, batches)
+
+                print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                      (epoch, batches, train_acc))
+
+            if batches % 1000 == 0:
+                save_checkpoint(net, optimizer, batches, "train_erm_densenet_test_continued")
+
+            batches += 1
+
+        val_loss = 0
+        val_correct = 0
+        val_count = 0
+        # Speed up validation by telling torch not to worry about computing gradients
+
+
+        with torch.no_grad():
+            print("validation")
+            for val_batch in val_loader:
+                
+                if (val_count % 100 == 0):
+                    print("val batch {}".format(val_count))
+
+
+                images, cell_type, labels = val_batch
+                val_images = images.float().to(device)
+                val_labels = labels.to(device)
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+
+                val_count += len(labels)
+
+                with torch.no_grad():
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
+                    val_loss += loss.item()
+                    val_correct += acc
+
+        val_loss = val_loss / val_count
+        val_acc = val_correct / val_count
+
+        if writer is not None:
+            writer.add_scalar('Loss/val', val_loss, epoch)
+            writer.add_scalar('Acc/val', val_acc, epoch)
+
+    save_checkpoint(net, optimizer, batches, "train_erm_densenet_test_continued")
+    return net
+
+
+    
 
 def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
               writer: SummaryWriter, args: argparse.Namespace):
@@ -383,6 +474,19 @@ def get_est_time():
     current_time = datetime.now(timezone('US/Eastern'))
     return current_time.strftime(time_format)
 
+
+def load_model_optimizer(model, optimizer, filename):
+    if os.path.isfile(filename):
+        print("Loading file {}".format(filename))
+        checkpoint = torch.load(filename)
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+    else:
+        print("no file found at {}".format(filename))
+    
+    return model, optimizer
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', help='The path to the root of the data directory '
@@ -436,15 +540,26 @@ if __name__ == '__main__':
     net = DenseNet(len(sirnas)).to('cuda')
     # net = MultitaskNet(len(sirnas)).to('cuda')
 
+
+
+
+
     est_time = get_est_time()
 
     writer = SummaryWriter('logs/erm{}'.format(est_time))
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
-    train_erm(net, combined_train_loader, val_loader, writer, args)
-    writer = SummaryWriter('logs/irm{}'.format(est_time))
+    
+    ##Unloaded
+    # train_erm(net, combined_train_loader, val_loader, writer, args)
+    # writer = SummaryWriter('logs/irm{}'.format(est_time))
     #train_irm(net, loaders, val_loader, writer, args)
-    writer = SummaryWriter('logs/multitask_{}'.format(est_time))
+    # writer = SummaryWriter('logs/multitask_{}'.format(est_time))
     # train_multitask(net, loaders, val_loader, writer, args)
+
+    ###load model changes
+    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    net_loaded, optimizer_loaded = load_model_optimizer(net, optimizer, 'saved_models/train_erm_densenet_test_25000.pth')
+    train_erm_load_optimizer(net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
 
 
 
