@@ -6,6 +6,8 @@ standard neural network trainnig (empirical risk minimization)
 import argparse
 import os
 import time
+from pytz import timezone
+from datetime import datetime
 from typing import List
 
 import numpy as np
@@ -18,6 +20,7 @@ from torch.utils.data import DataLoader, ConcatDataset, Subset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+
 
 import datasets
 from datasets import RecursionDataset
@@ -375,6 +378,11 @@ def get_datasets(args: argparse.Namespace,
     return train_data, val_data
 
 
+def get_est_time():
+    time_format = "%Y-%m-%d.%Hhours_%Mminutes_%Sseconds"
+    current_time = datetime.now(timezone('US/Eastern'))
+    return current_time.strftime(time_format)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', help='The path to the root of the data directory '
@@ -399,18 +407,18 @@ if __name__ == '__main__':
     combined_train_data = ConcatDataset([HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
 
-    subset_indices = list(range(0, len(val_data), 100))
+    # subset_indices = list(range(0, len(val_data), 100))
 
-    HEPG2_train_loader = DataLoader(HEPG2_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
-    HUVEC_train_loader = DataLoader(HUVEC_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
-    RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+    HEPG2_train_loader = DataLoader(HEPG2_train_data, batch_size=16, shuffle=True)
+    HUVEC_train_loader = DataLoader(HUVEC_train_data, batch_size=16, shuffle=True)
+    RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=True)
 
 
 
-    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=True)
 
     
-    val_loader = DataLoader(val_data, batch_size=2, shuffle=False, sampler=SubsetRandomSampler(subset_indices))
+    val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
     train_dir = os.path.join(args.data_dir, 'images', 'train')
@@ -428,12 +436,14 @@ if __name__ == '__main__':
     net = DenseNet(len(sirnas)).to('cuda')
     # net = MultitaskNet(len(sirnas)).to('cuda')
 
-    writer = SummaryWriter('logs/erm{}'.format(time.time()))
+    est_time = get_est_time()
+
+    writer = SummaryWriter('logs/erm{}'.format(est_time))
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
     train_erm(net, combined_train_loader, val_loader, writer, args)
-    writer = SummaryWriter('logs/irm{}'.format(time.time()))
+    writer = SummaryWriter('logs/irm{}'.format(est_time))
     #train_irm(net, loaders, val_loader, writer, args)
-    writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
+    writer = SummaryWriter('logs/multitask_{}'.format(est_time))
     # train_multitask(net, loaders, val_loader, writer, args)
 
 

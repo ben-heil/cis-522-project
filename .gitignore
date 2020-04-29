@@ -1,5 +1,6 @@
 data/*
 rxrx1/*
 logs/*
+old_logs/*
 saved_models/*
-*.pthgit 
+*.pth 
