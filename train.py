@@ -206,7 +206,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                     print("Epoch : %d, Batches : %d, train accuracy : %f" %
                           (epoch, batches, train_acc))
 
-                if batches % 1000 == 0:
+                if batches % 5000 == 0:
                     save_checkpoint(net, optimizer, batches,
                                     args.checkpoint_name)
 
@@ -301,7 +301,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
                 print("Epoch : %d, Batches : %d, train accuracy : %f" %
                       (epoch, batches, train_acc))
 
-            if batches % 1000 == 0:
+            if batches % 5000 == 0:
                 save_checkpoint(net, optimizer, batches,
                                 "{}_continued".format(args.checkpoint_name))
 
@@ -409,7 +409,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
                 print("Epoch : %d, Batches : %d, train accuracy : %f" %
                       (epoch, batches, train_acc))
 
-            if batches % 1000 == 0:
+            if batches % 5000 == 0:
                 save_checkpoint(net, optimizer, batches, args.checkpoint_name)
 
             batches += 1
@@ -554,40 +554,40 @@ if __name__ == '__main__':
 
     net = None
 
-    if (args.model_type == "densenet"):
-        print("you picked densenet")
-        net = DenseNet(len(sirnas)).to('cuda')
-    elif (args.model_type == "kaggle"):
-        print("you picked kaggle")
-        net = ModelAndLoss(len(sirnas)).to('cuda')
-    elif(args.model_type == "multitask"):
-        print("you picked multitask")
-        net = MultitaskNet(len(sirnas)).to('cuda')
-    else:
-        print("invalid model type")
+    # if (args.model_type == "densenet"):
+    #     print("you picked densenet")
+    #     net = DenseNet(len(sirnas)).to('cuda')
+    # elif (args.model_type == "kaggle"):
+    #     print("you picked kaggle")
+    #     net = ModelAndLoss(len(sirnas)).to('cuda')
+    # elif(args.model_type == "multitask"):
+    #     print("you picked multitask")
+    #     net = MultitaskNet(len(sirnas)).to('cuda')
+    # else:
+    #     print("invalid model type")
 
-    if (args.train_type == 'erm'):
-        print("training with erm")
-        writer = SummaryWriter('logs/erm{}'.format(est_time))
-        train_erm(net, combined_train_loader, val_loader, writer, args)
-    elif (args.train_type == 'irm'):
-        print("training with irm")
-        writer = SummaryWriter('logs/irm{}'.format(est_time))
+    # if (args.train_type == 'erm'):
+    #     print("training with erm")
+    #     writer = SummaryWriter('logs/erm{}'.format(est_time))
+    #     train_erm(net, combined_train_loader, val_loader, writer, args)
+    # elif (args.train_type == 'irm'):
+    #     print("training with irm")
+    #     writer = SummaryWriter('logs/irm{}'.format(est_time))
 
-        train_irm(net, loaders, val_loader, writer, args)
-    elif (args.train_type == 'multitask'):
-        print("training with multitask")
-        writer = SummaryWriter('logs/multitask_{}'.format(est_time))
-        train_multitask(net, loaders, val_loader, writer, args)
-    else:
-        print("invalid train type")
+    #     train_irm(net, loaders, val_loader, writer, args)
+    # elif (args.train_type == 'multitask'):
+    #     print("training with multitask")
+    #     writer = SummaryWriter('logs/multitask_{}'.format(est_time))
+    #     train_multitask(net, loaders, val_loader, writer, args)
+    # else:
+    #     print("invalid train type")
 
     # Initialize netork
     # net = ModelAndLoss(len(sirnas)).to('cuda')
     # net = DenseNet(len(sirnas)).to('cuda')
     # net = MultitaskNet(len(sirnas)).to('cuda')
 
-        # Unloaded
+    # Unloaded
     # train_erm(net, combined_train_loader, val_loader, writer, args)
     # writer = SummaryWriter('logs/irm{}'.format(est_time))
     # train_irm(net, loaders, val_loader, writer, args)
@@ -595,6 +595,8 @@ if __name__ == '__main__':
     # train_multitask(net, loaders, val_loader, writer, args)
 
     # load model changes
-    # optimizer = optim.Adam(net.parameters(), lr=1e-5)
-    # net_loaded, optimizer_loaded = load_model_optimizer(net, optimizer, 'saved_models/train_erm_densenet_test_29000.pth')
-    # train_erm_load_optimizer(net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
+    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    net_loaded, optimizer_loaded = load_model_optimizer(
+        net, optimizer, 'saved_models/train_erm_kaggle_continued_24000.pth')
+    train_erm_load_optimizer(
+        net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
