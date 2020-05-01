@@ -499,12 +499,13 @@ if __name__ == '__main__':
                                          '(called rxrx1 by default)')
     parser.add_argument('model_type')
     parser.add_argument('train_type')
+    parser.add_argument('checkpoint_name')
     parser.add_argument('--num_epochs', default=100, help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
                         'penalty. A larger factor emphasizes classification accuracy over '
                         'consistency across environments.')
-    parser.add_argument('--checkpoint_name', default="irm_kaggle")
+    
 
     args = parser.parse_args()
 
@@ -547,13 +548,10 @@ if __name__ == '__main__':
 
 
 
-    print("running model and loss IRM!")
-
-
-
 
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
     est_time = get_est_time()
+
 
     # writer = SummaryWriter('logs/erm{}'.format(est_time))
     
@@ -587,6 +585,7 @@ if __name__ == '__main__':
     elif (args.train_type == 'irm'):
         print("training with irm")
         writer = SummaryWriter('logs/irm{}'.format(est_time))
+
         train_irm(net, loaders, val_loader, writer, args)
     elif (args.train_type == 'multitask'):
         print("training with multitask")
