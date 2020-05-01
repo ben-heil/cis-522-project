@@ -128,6 +128,122 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
     return net
 
 
+def train_irm_load(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataLoader, writer: SummaryWriter,
+                   args: argparse.Namespace, optimizer: optim.Adam):
+    '''Train the given network using invariant risk minimization. This code is based on my
+    implementation of IRM in https://github.com/ben-heil/whistl/, and by extension the original
+    implementation by Arjovsky et al. 2019
+
+    Arguments
+    ---------
+    net:
+        The network to train
+    train_loaders:
+        A list containing a DataLoader for each environment
+    val_loader:
+        The dataloader containing the validation dataset
+    writer:
+        The SummaryWriter to write results to
+
+    Returns
+    -------
+    net:
+        The network after training is finished
+    '''
+    print("train loader length {}".format(len(train_loaders)))
+    print("Val loader length {}".format(len(val_loader)))
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+
+    dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
+
+    batches = 0
+    for epoch in tqdm(range(args.num_epochs)):
+        train_correct = 0
+        train_loss = 0
+        train_penalty = 0
+        train_raw_loss = 0
+        train_count = 0
+        for env_loader in train_loaders:
+            for batch in env_loader:
+                image, cell_type, labels = batch
+                image = image.float().to(device)
+                labels = labels.to(device)
+                cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+                train_count += len(labels)
+
+                optimizer.zero_grad()
+                loss, acc = net.train_forward(
+                    image, cell_type, labels, dummy_w)
+                train_raw_loss += loss.item()
+                train_correct += acc
+
+                # This penalty is the norm of the gradient of 1 * the loss function.
+                # The penalty helps keep the model from ignoring one study to the benefit
+                # of the others, and the theoretical basis can be found in the Invariant
+                # Risk Minimization paper
+                penalty = compute_irm_penalty(loss, dummy_w)
+                train_penalty += penalty.item()
+
+                # Calculate the gradient of the combined loss function
+                combined_loss = args.loss_scaling_factor * loss + penalty
+                train_loss += combined_loss.item()
+                combined_loss.backward(retain_graph=False)
+                optimizer.step()
+
+                if batches % 100 == 0:
+                    train_loss = train_loss / train_count
+                    train_raw_loss = train_raw_loss / train_count
+                    train_acc = train_correct / train_count
+
+                    writer.add_scalar('Loss/train', train_loss, batches)
+                    writer.add_scalar('Raw_Loss/train',
+                                      train_raw_loss, batches)
+                    writer.add_scalar('Acc/train', train_acc, batches)
+                    print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                          (epoch, batches, train_acc))
+
+                if batches % 5000 == 0:
+                    save_checkpoint(net, optimizer, batches,
+                                    args.checkpoint_name)
+
+                batches += 1
+
+        val_loss = 0
+        val_correct = 0
+        val_count = 0
+        # Speed up validation by telling torch not to worry about computing gradients
+        with torch.no_grad():
+            for val_batch in val_loader:
+                images, cell_type, labels = val_batch
+                val_images = images.float().to(device)
+                val_labels = labels.to(device)
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+
+                val_count += len(labels)
+
+                with torch.no_grad():
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
+                    val_loss += loss.item()
+                    val_correct += acc
+
+        val_loss = val_loss / val_count
+        val_acc = val_correct / val_count
+
+        if writer is not None:
+            writer.add_scalar('Loss/val', val_loss, epoch)
+            writer.add_scalar('Acc/val', val_acc, epoch)
+
+        save_checkpoint(net, optimizer, batches,
+                        "{}_final".format(args.checkpoint_name))
+
+    return net
+
+
 def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataLoader, writer: SummaryWriter,
               args: argparse.Namespace):
     '''Train the given network using invariant risk minimization. This code is based on my
@@ -595,11 +711,20 @@ if __name__ == '__main__':
     # train_multitask(net, loaders, val_loader, writer, args)
 
     # load model changes
-    print("latest")
-    writer = SummaryWriter('logs/erm{}'.format(est_time))
+
+    # ERM Kaggle
+    # print("latest")
+    # writer = SummaryWriter('logs/erm{}'.format(est_time))
+    # net = ModelAndLoss(len(sirnas)).to('cuda')
+    # optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    # net_loaded, optimizer_loaded = load_model_optimizer(
+    #     net, optimizer, 'saved_models/train_erm_kaggle_continued_24000.pth')
+    # train_erm_load_optimizer(
+    #     net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
+    # IRM Kaggle
     net = ModelAndLoss(len(sirnas)).to('cuda')
-    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    writer = SummaryWriter('logs/irm{}'.format(est_time))
+    optimizer = optim.Adam(net.parameters(), lr=1e-4)
     net_loaded, optimizer_loaded = load_model_optimizer(
-        net, optimizer, 'saved_models/train_erm_kaggle_continued_24000.pth')
-    train_erm_load_optimizer(
-        net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
+        net, optimizer, 'saved_models/irm_kaggle_45000.pth')
+    train_irm_load(net, loaders, val_loader, writer, args, optimizer_loaded)
