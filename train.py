@@ -727,6 +727,6 @@ if __name__ == '__main__':
     writer = SummaryWriter('logs/irm{}'.format(est_time))
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
     net_loaded, optimizer_loaded = load_model_optimizer(
-        net, optimizer, 'saved_models/irm_kaggle_45000.pth')
+        net, optimizer, 'saved_models/irm_kaggle_44000.pth')
     train_irm_load(net_loaded, loaders, val_loader,
                    writer, args, optimizer_loaded)
