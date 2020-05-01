@@ -203,10 +203,12 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                     writer.add_scalar('Raw_Loss/train',
                                       train_raw_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
-                    print("Epoch : %d, Batches : %d, train accuracy : %f" % (epoch, batches, train_acc))
+                    print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                          (epoch, batches, train_acc))
 
                 if batches % 1000 == 0:
-                    save_checkpoint(net, optimizer, batches, args.checkpoint_name)
+                    save_checkpoint(net, optimizer, batches,
+                                    args.checkpoint_name)
 
                 batches += 1
 
@@ -237,19 +239,22 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
-        save_checkpoint(net, optimizer, batches, "{}_final".format(args.checkpoint_name))
+        save_checkpoint(net, optimizer, batches,
+                        "{}_final".format(args.checkpoint_name))
 
     return net
+
 
 def save_checkpoint(model, optimizer, batch_num, base_name):
     checkpoint = {
         'model': model,
         'state_dict': model.state_dict(),
-        'optimizer' : optimizer.state_dict()
+        'optimizer': optimizer.state_dict()
     }
 
     save_name = "saved_models/{}_{}.pth".format(base_name, batch_num)
     torch.save(checkpoint, save_name)
+
 
 def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader, writer: SummaryWriter, args: argparse.Namespace, optimizer: optim.Adam):
     '''adds optimizer argument that is loaded prior'''
@@ -283,9 +288,8 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
             train_correct += acc
 
             train_loss += loss.item()
-            loss.backward(retain_graph=False) #modification here
+            loss.backward(retain_graph=False)  # modification here
             optimizer.step()
-
 
             if batches % 100 == 0:
                 train_loss = train_loss / train_count
@@ -298,7 +302,8 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
                       (epoch, batches, train_acc))
 
             if batches % 1000 == 0:
-                save_checkpoint(net, optimizer, batches, "{}_continued".format(args.checkpoint_name))
+                save_checkpoint(net, optimizer, batches,
+                                "{}_continued".format(args.checkpoint_name))
 
             batches += 1
 
@@ -307,14 +312,12 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
         val_count = 0
         # Speed up validation by telling torch not to worry about computing gradients
 
-
         with torch.no_grad():
             print("validation")
             for val_batch in val_loader:
-                
+
                 if (val_count % 100 == 0):
                     print("val batch {}".format(val_count))
-
 
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
@@ -337,11 +340,9 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
-    save_checkpoint(net, optimizer, batches, "{}_continued_final".format(args.checkpoint_name))
+    save_checkpoint(net, optimizer, batches,
+                    "{}_continued_final".format(args.checkpoint_name))
     return net
-
-
-    
 
 def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
               writer: SummaryWriter, args: argparse.Namespace):
@@ -394,9 +395,8 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             train_correct += acc
 
             train_loss += loss.item()
-            loss.backward(retain_graph=False) #modification here
+            loss.backward(retain_graph=False)  # modification here
             optimizer.step()
-
 
             if batches % 100 == 0:
                 train_loss = train_loss / train_count
@@ -418,14 +418,12 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         val_count = 0
         # Speed up validation by telling torch not to worry about computing gradients
 
-
         with torch.no_grad():
             print("validation")
             for val_batch in val_loader:
-                
+
                 if (val_count % 100 == 0):
                     print("val batch {}".format(val_count))
-
 
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
@@ -448,7 +446,8 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
-    save_checkpoint(net, optimizer, batches, "{}_final".format(args.checkpoint_name))
+    save_checkpoint(net, optimizer, batches,
+                    "{}_final".format(args.checkpoint_name))
     return net
 
 
@@ -466,7 +465,7 @@ def get_datasets(args: argparse.Namespace,
                                )
     data_len = len(dataset)
     train_data, val_data = torch.utils.data.random_split(dataset, (data_len - data_len // 10,
-                                                                    data_len // 10
+                                                                   data_len // 10
                                                                    )
                                                          )
 
@@ -489,7 +488,7 @@ def load_model_optimizer(model, optimizer, filename):
         optimizer.load_state_dict(checkpoint['optimizer'])
     else:
         print("no file found at {}".format(filename))
-    
+
     return model, optimizer
 
 
@@ -500,39 +499,42 @@ if __name__ == '__main__':
     parser.add_argument('model_type')
     parser.add_argument('train_type')
     parser.add_argument('checkpoint_name')
-    parser.add_argument('--num_epochs', default=100, help='The number of epochs to train')
+    parser.add_argument('--num_epochs', default=100,
+                        help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
                         'penalty. A larger factor emphasizes classification accuracy over '
                         'consistency across environments.')
-    
 
     args = parser.parse_args()
 
     # Create sirna encoder
-    metadata_df = datasets.load_metadata_df(os.path.join(args.data_dir, 'rxrx1.csv'))
+    metadata_df = datasets.load_metadata_df(
+        os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
-    HEPG2_train_data, HEPG2_val_data = get_datasets(args, 'HEPG2', sirna_encoder)
-    HUVEC_train_data, HUVEC_val_data = get_datasets(args, 'HUVEC', sirna_encoder)
+    HEPG2_train_data, HEPG2_val_data = get_datasets(
+        args, 'HEPG2', sirna_encoder)
+    HUVEC_train_data, HUVEC_val_data = get_datasets(
+        args, 'HUVEC', sirna_encoder)
     RPE_train_data, RPE_val_data = get_datasets(args, 'RPE', sirna_encoder)
-    combined_train_data = ConcatDataset([HEPG2_train_data, HUVEC_train_data, RPE_train_data])
+    combined_train_data = ConcatDataset(
+        [HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
 
     # subset_indices = list(range(0, len(val_data), 100))
 
-    HEPG2_train_loader = DataLoader(HEPG2_train_data, batch_size=16, shuffle=True)
-    HUVEC_train_loader = DataLoader(HUVEC_train_data, batch_size=16, shuffle=True)
+    HEPG2_train_loader = DataLoader(
+        HEPG2_train_data, batch_size=16, shuffle=True)
+    HUVEC_train_loader = DataLoader(
+        HUVEC_train_data, batch_size=16, shuffle=True)
     RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=True)
+    combined_train_loader = DataLoader(
+        combined_train_data, batch_size=16, shuffle=True)
 
-
-
-    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=True)
-
-    
     val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
@@ -542,15 +544,14 @@ if __name__ == '__main__':
                                  sirna_encoder,
                                  'train',
                                  'U2OS'
-                                )
+                                 )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
-    loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
+    # loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
+    loaders = [HEPG2_train_loader]
     est_time = get_est_time()
 
     net = None
-
-
 
 
     if (args.model_type == "densenet"):
@@ -564,10 +565,9 @@ if __name__ == '__main__':
         net = MultitaskNet(len(sirnas)).to('cuda')
     else:
         print("invalid model type")
-    
 
     if (args.train_type == 'erm'):
-        print("training with erm") 
+        print("training with erm")
         writer = SummaryWriter('logs/erm{}'.format(est_time))
         train_erm(net, combined_train_loader, val_loader, writer, args)
     elif (args.train_type == 'irm'):
@@ -581,8 +581,6 @@ if __name__ == '__main__':
         train_multitask(net, loaders, val_loader, writer, args)
     else:
         print("invalid train type")
-    
-
 
 
     # Initialize netork
@@ -590,14 +588,14 @@ if __name__ == '__main__':
     # net = DenseNet(len(sirnas)).to('cuda')
     # net = MultitaskNet(len(sirnas)).to('cuda')
 
-        ##Unloaded
+        # Unloaded
     # train_erm(net, combined_train_loader, val_loader, writer, args)
     # writer = SummaryWriter('logs/irm{}'.format(est_time))
     # train_irm(net, loaders, val_loader, writer, args)
     # writer = SummaryWriter('logs/multitask_{}'.format(est_time))
     # train_multitask(net, loaders, val_loader, writer, args)
 
-    ###load model changes
+    # load model changes
     # optimizer = optim.Adam(net.parameters(), lr=1e-5)
     # net_loaded, optimizer_loaded = load_model_optimizer(net, optimizer, 'saved_models/train_erm_densenet_test_29000.pth')
     # train_erm_load_optimizer(net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
