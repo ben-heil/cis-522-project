@@ -596,6 +596,7 @@ if __name__ == '__main__':
 
     # load model changes
     print("latest")
+    writer = SummaryWriter('logs/erm{}'.format(est_time))
     net = ModelAndLoss(len(sirnas)).to('cuda')
     optimizer = optim.Adam(net.parameters(), lr=1e-5)
     net_loaded, optimizer_loaded = load_model_optimizer(
