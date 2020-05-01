@@ -306,7 +306,8 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
 
 def get_datasets(args: argparse.Namespace,
                  cell_type: str,
-                 sirna_encoder: skl.preprocessing.LabelEncoder
+                 sirna_encoder: skl.preprocessing.LabelEncoder,
+                 sirnas_to_keep: List[int] = None,
                 ):
     '''Generate train and val RecursionDataset objects for a given cell type'''
     train_dir = os.path.join(args.data_dir, 'images', 'train')
@@ -314,7 +315,8 @@ def get_datasets(args: argparse.Namespace,
                                train_dir,
                                sirna_encoder,
                                'train',
-                               cell_type
+                               cell_type,
+                               sirnas_to_keep=sirnas_to_keep
                               )
     data_len = len(dataset)
     train_data, val_data = torch.utils.data.random_split(dataset, (data_len // 10,
@@ -341,12 +343,13 @@ if __name__ == '__main__':
     metadata_df = datasets.load_metadata_df(os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
+    sirnas = sirnas[:50]
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
-    HEPG2_train_data, HEPG2_val_data = get_datasets(args, 'HEPG2', sirna_encoder)
-    HUVEC_train_data, HUVEC_val_data = get_datasets(args, 'HUVEC', sirna_encoder)
-    RPE_train_data, RPE_val_data = get_datasets(args, 'RPE', sirna_encoder)
+    HEPG2_train_data, HEPG2_val_data = get_datasets(args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
+    HUVEC_train_data, HUVEC_val_data = get_datasets(args, 'HUVEC', sirna_encoder, sirnas_to_keep=sirnas)
+    RPE_train_data, RPE_val_data = get_datasets(args, 'RPE', sirna_encoder, sirnas_to_keep=sirnas)
     combined_train_data = ConcatDataset([HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
 
