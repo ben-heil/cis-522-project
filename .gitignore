@@ -3,4 +3,5 @@ rxrx1/*
 logs/*
 old_logs/*
 saved_models/*
-*.pth 
+*.pth
+*.pem 
