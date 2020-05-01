@@ -722,6 +722,7 @@ if __name__ == '__main__':
     # train_erm_load_optimizer(
     #     net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
     # IRM Kaggle
+    print("kaggle irm continued")
     net = ModelAndLoss(len(sirnas)).to('cuda')
     writer = SummaryWriter('logs/irm{}'.format(est_time))
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
