@@ -545,20 +545,8 @@ if __name__ == '__main__':
                                 )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
-
-
-
-
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
     est_time = get_est_time()
-
-
-    # writer = SummaryWriter('logs/erm{}'.format(est_time))
-    
-    
-
-
-
 
     net = None
 
