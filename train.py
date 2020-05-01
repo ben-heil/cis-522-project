@@ -344,6 +344,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
                     "{}_continued_final".format(args.checkpoint_name))
     return net
 
+
 def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
               writer: SummaryWriter, args: argparse.Namespace):
     '''Train the given network using invariant risk minimization. This code is based on my
@@ -547,12 +548,11 @@ if __name__ == '__main__':
                                  )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
-    # loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
-    loaders = [HEPG2_train_loader]
+    loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
+    # loaders = [HEPG2_train_loader]
     est_time = get_est_time()
 
     net = None
-
 
     if (args.model_type == "densenet"):
         print("you picked densenet")
@@ -581,7 +581,6 @@ if __name__ == '__main__':
         train_multitask(net, loaders, val_loader, writer, args)
     else:
         print("invalid train type")
-
 
     # Initialize netork
     # net = ModelAndLoss(len(sirnas)).to('cuda')
