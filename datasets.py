@@ -18,17 +18,20 @@ def load_metadata_df(csv_path):
     return csv_df
 
 class RecursionDataset(Dataset):
-    def __init__(self, csv_path, root_path, sirna_encoder, mode='train', cell_type=None):
+    def __init__(self, csv_path, root_path, sirna_encoder, mode='train', cell_type=None, sirnas_to_keep=None):
         self.sirna_encoder = sirna_encoder
 
         csv_path = csv_path.rstrip('/')
         if not os.path.exists(csv_path):
-            print('Path {} does not exist'.format(path))
+            print('Path {} does not exist'.format(csv_path))
             raise FileNotFoundError
 
         root_path = root_path.rstrip('/')
 
         self.csv_df = load_metadata_df(csv_path)
+
+        if sirnas_to_keep is not None:
+            self.csv_df = self.csv_df[self.csv_df['sirna'].isin(sirnas_to_keep)]
 
         # Initialize cell type encoders
         self.cell_type_label_encoder = preprocessing.LabelEncoder()
