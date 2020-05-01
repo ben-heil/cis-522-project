@@ -319,8 +319,8 @@ def get_datasets(args: argparse.Namespace,
                                sirnas_to_keep=sirnas_to_keep
                               )
     data_len = len(dataset)
-    train_data, val_data = torch.utils.data.random_split(dataset, (data_len // 10,
-                                                                   data_len - data_len // 10
+    train_data, val_data = torch.utils.data.random_split(dataset, (data_len - data_len // 10,
+                                                                   data_len // 10
                                                                   )
                                                         )
 
