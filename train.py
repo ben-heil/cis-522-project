@@ -595,6 +595,8 @@ if __name__ == '__main__':
     # train_multitask(net, loaders, val_loader, writer, args)
 
     # load model changes
+    print("latest")
+    net = ModelAndLoss(len(sirnas)).to('cuda')
     optimizer = optim.Adam(net.parameters(), lr=1e-5)
     net_loaded, optimizer_loaded = load_model_optimizer(
         net, optimizer, 'saved_models/train_erm_kaggle_continued_24000.pth')
