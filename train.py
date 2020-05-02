@@ -630,14 +630,21 @@ if __name__ == '__main__':
         os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
+    sirnas = sirnas[:50]
+
+    control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
+                      's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
+    sirnas = list(set(sirnas + control_sirnas))
+
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
     HEPG2_train_data, HEPG2_val_data = get_datasets(
-        args, 'HEPG2', sirna_encoder)
+        args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
     HUVEC_train_data, HUVEC_val_data = get_datasets(
-        args, 'HUVEC', sirna_encoder)
-    RPE_train_data, RPE_val_data = get_datasets(args, 'RPE', sirna_encoder)
+        args, 'HUVEC', sirna_encoder, sirnas_to_keep=sirnas)
+    RPE_train_data, RPE_val_data = get_datasets(
+        args, 'RPE', sirna_encoder, sirnas_to_keep=sirnas)
     combined_train_data = ConcatDataset(
         [HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
