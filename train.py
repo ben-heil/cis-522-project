@@ -637,7 +637,7 @@ if __name__ == '__main__':
 
     print("control shape: ", len(control_sirnas))
     print("sirnas shape: ", sirnas.shape)
-    sirnas = list(set(sirnas + control_sirnas))
+    sirnas = list(set(sirnas.tolist() + control_sirnas))
 
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
