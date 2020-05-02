@@ -96,6 +96,8 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
 
                     writer.add_scalar('Loss/train', train_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
+                    print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                          (epoch, batches, train_acc))
 
                 
                 if batches % 5000 == 0:
