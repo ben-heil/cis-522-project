@@ -96,6 +96,11 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
 
                     writer.add_scalar('Loss/train', train_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
+
+                
+                if batches % 5000 == 0:
+                    save_checkpoint(net, optimizer, batches,
+                                    args.checkpoint_name)
                 batches += 1
 
         val_loss = 0
@@ -709,6 +714,16 @@ if __name__ == '__main__':
         train_multitask(net, loaders, val_loader, writer, args)
     else:
         print("invalid train type")
+
+    print("save final net")
+    checkpoint = {
+        'state_dict': net.state_dict(),
+    }
+
+    save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
+    torch.save(checkpoint, save_name)
+
+
 
     # Initialize netork
     # net = ModelAndLoss(len(sirnas)).to('cuda')
