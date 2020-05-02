@@ -18,7 +18,7 @@ class LogisticRegression(torch.nn.Module):
         self.input_dim = input_dim
         self.num_classes = num_classes
     def forward(self, x):
-        x = x.view(-1, 300*300*3)
+        x = x.view(-1, self.input_dim)
         outputs = self.linear(x)
         return outputs
     

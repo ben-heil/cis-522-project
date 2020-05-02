@@ -58,9 +58,7 @@ def train_baseline(net: nn.Module, train_loader: DataLoader, val_loader: DataLoa
             image = image.float().to(device)
             labels = labels.to(device)
             cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
-            train_count += len(labels)
-            # print(image.shape, cell_type.shape, labels.shape)            
-            
+            train_count += len(labels)         
             optimizer.zero_grad()
             output = net(image)
 
@@ -132,8 +130,8 @@ if __name__ == '__main__':
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
-    net = LogisticRegression(100, len(sirnas))
-    net = CNN(len(sirnas))
+    net = LogisticRegression(512*512*6, len(sirnas))
+    # net = CNN(len(sirnas))
     
     # print(len(sirnas))  ==> 1139
     dataset1 = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'), train_dir, sirna_encoder, 'train', 'HEPG2')
@@ -145,7 +143,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=2)
 
 
-    writer = SummaryWriter('logs/irm{}'.format(time.time()))
+    writer = SummaryWriter('logs/baseline{}'.format(time.time()))
     loaders = [loader1, loader2]
     
     train_baseline(net, loader1, val_loader, writer, args)
