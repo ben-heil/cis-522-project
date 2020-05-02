@@ -632,12 +632,12 @@ if __name__ == '__main__':
 
     sirnas = metadata_df['sirna'].unique()
     print("test", sirnas)
-    sirnas = sirnas[:50]
+    # sirnas = sirnas[:50]
 
-    control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
-                      's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
-    merged_sirnas_list = list(set(sirnas.tolist() + control_sirnas))
-    sirnas = np.array(merged_sirnas_list)
+    # control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
+    #                   's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
+    # merged_sirnas_list = list(set(sirnas.tolist() + control_sirnas))
+    # sirnas = np.array(merged_sirnas_list)
 
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
