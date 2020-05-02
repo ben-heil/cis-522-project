@@ -638,7 +638,8 @@ if __name__ == '__main__':
     print("control shape: ", len(control_sirnas))
     print("sirnas shape: ", sirnas.shape)
     print(type(sirnas))
-    sirnas = list(set(sirnas.tolist() + control_sirnas))
+    merged_sirnas_list = list(set(sirnas.tolist() + control_sirnas))
+    sirnas = np.array(merged_sirnas_list)
 
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
