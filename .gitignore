@@ -5,3 +5,4 @@ old_logs/*
 saved_models/*
 *.pth
 *.pem 
+__pycache__/
