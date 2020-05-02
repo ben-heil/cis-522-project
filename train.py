@@ -642,6 +642,7 @@ if __name__ == '__main__':
     merged_sirnas_list = list(set(sirnas.tolist() + control_sirnas))
     sirnas = np.array(merged_sirnas_list)
 
+    print(type(sirnas))
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
