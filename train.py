@@ -570,7 +570,8 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
 
 def get_datasets(args: argparse.Namespace,
                  cell_type: str,
-                 sirna_encoder: skl.preprocessing.LabelEncoder
+                 sirna_encoder: skl.preprocessing.LabelEncoder,
+                 sirnas_to_keep: List[int] = None,
                  ):
     '''Generate train and val RecursionDataset objects for a given cell type'''
     train_dir = os.path.join(args.data_dir, 'images', 'train')
