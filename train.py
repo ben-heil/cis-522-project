@@ -639,6 +639,8 @@ if __name__ == '__main__':
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
+    print("5/1 10PM ")
+
     HEPG2_train_data, HEPG2_val_data = get_datasets(
         args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
     HUVEC_train_data, HUVEC_val_data = get_datasets(
