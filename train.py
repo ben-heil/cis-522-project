@@ -638,7 +638,7 @@ if __name__ == '__main__':
                       's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
     control_sirnas_array = np.array(control_sirnas)
     sirnas = np.append(sirnas, control_sirnas_array)
-    sirnas = np.unique(sirnas, axis=0)
+    sirnas = np.unique(sirnas)
     print(sirnas)
 
     sirna_encoder = skl.preprocessing.LabelEncoder()
