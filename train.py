@@ -635,18 +635,11 @@ if __name__ == '__main__':
 
     control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
                       's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
-
-    print("control shape: ", len(control_sirnas))
-    print("sirnas shape: ", sirnas.shape)
-    print(type(sirnas))
     merged_sirnas_list = list(set(sirnas.tolist() + control_sirnas))
     sirnas = np.array(merged_sirnas_list)
 
-    print(type(sirnas))
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
-
-    print("5/1 10PM ")
 
     HEPG2_train_data, HEPG2_val_data = get_datasets(
         args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
@@ -681,38 +674,37 @@ if __name__ == '__main__':
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
-    # loaders = [HEPG2_train_loader]
     est_time = get_est_time()
 
     net = None
 
-    # if (args.model_type == "densenet"):
-    #     print("you picked densenet")
-    #     net = DenseNet(len(sirnas)).to('cuda')
-    # elif (args.model_type == "kaggle"):
-    #     print("you picked kaggle")
-    #     net = ModelAndLoss(len(sirnas)).to('cuda')
-    # elif(args.model_type == "multitask"):
-    #     print("you picked multitask")
-    #     net = MultitaskNet(len(sirnas)).to('cuda')
-    # else:
-    #     print("invalid model type")
+    if (args.model_type == "densenet"):
+        print("you picked densenet")
+        net = DenseNet(len(sirnas)).to('cuda')
+    elif (args.model_type == "kaggle"):
+        print("you picked kaggle")
+        net = ModelAndLoss(len(sirnas)).to('cuda')
+    elif(args.model_type == "multitask"):
+        print("you picked multitask")
+        net = MultitaskNet(len(sirnas)).to('cuda')
+    else:
+        print("invalid model type")
 
-    # if (args.train_type == 'erm'):
-    #     print("training with erm")
-    #     writer = SummaryWriter('logs/erm{}'.format(est_time))
-    #     train_erm(net, combined_train_loader, val_loader, writer, args)
-    # elif (args.train_type == 'irm'):
-    #     print("training with irm")
-    #     writer = SummaryWriter('logs/irm{}'.format(est_time))
+    if (args.train_type == 'erm'):
+        print("training with erm")
+        writer = SummaryWriter('logs/erm{}'.format(est_time))
+        train_erm(net, combined_train_loader, val_loader, writer, args)
+    elif (args.train_type == 'irm'):
+        print("training with irm")
+        writer = SummaryWriter('logs/irm{}'.format(est_time))
 
-    #     train_irm(net, loaders, val_loader, writer, args)
-    # elif (args.train_type == 'multitask'):
-    #     print("training with multitask")
-    #     writer = SummaryWriter('logs/multitask_{}'.format(est_time))
-    #     train_multitask(net, loaders, val_loader, writer, args)
-    # else:
-    #     print("invalid train type")
+        train_irm(net, loaders, val_loader, writer, args)
+    elif (args.train_type == 'multitask'):
+        print("training with multitask")
+        writer = SummaryWriter('logs/multitask_{}'.format(est_time))
+        train_multitask(net, loaders, val_loader, writer, args)
+    else:
+        print("invalid train type")
 
     # Initialize netork
     # net = ModelAndLoss(len(sirnas)).to('cuda')
@@ -737,12 +729,13 @@ if __name__ == '__main__':
     #     net, optimizer, 'saved_models/train_erm_kaggle_continued_24000.pth')
     # train_erm_load_optimizer(
     #     net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
+
     # IRM Kaggle
-    print("kaggle irm continued")
-    net = ModelAndLoss(len(sirnas)).to('cuda')
-    writer = SummaryWriter('logs/irm{}'.format(est_time))
-    optimizer = optim.Adam(net.parameters(), lr=1e-4)
-    net_loaded, optimizer_loaded = load_model_optimizer(
-        net, optimizer, 'saved_models/irm_kaggle_44000.pth')
-    train_irm_load(net_loaded, loaders, val_loader,
-                   writer, args, optimizer_loaded)
+    # print("kaggle irm continued")
+    # net = ModelAndLoss(len(sirnas)).to('cuda')
+    # writer = SummaryWriter('logs/irm{}'.format(est_time))
+    # optimizer = optim.Adam(net.parameters(), lr=1e-4)
+    # net_loaded, optimizer_loaded = load_model_optimizer(
+    #     net, optimizer, 'saved_models/irm_kaggle_44000.pth')
+    # train_irm_load(net_loaded, loaders, val_loader,
+    #                writer, args, optimizer_loaded)
