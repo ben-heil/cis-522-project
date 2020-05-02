@@ -631,6 +631,7 @@ if __name__ == '__main__':
         os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
+    print("test", sirnas)
     sirnas = sirnas[:50]
 
     control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
