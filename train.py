@@ -337,6 +337,9 @@ if __name__ == '__main__':
                         help='The factor the loss is multiplied by before being added to the IRM '
                         'penalty. A larger factor emphasizes classification accuracy over '
                         'consistency across environments.')
+    parser.add_argument('--normalization', default = None,
+                        help = 'Define normalization across a \'plate\', \'experiment\', or as none.'
+                        '.csv with normalization values must be added to the data folder.')
     args = parser.parse_args()
 
     # Create sirna encoder
