@@ -38,7 +38,7 @@ class RecursionDataset(Dataset):
 
         if sirnas_to_keep is not None:
             self.csv_df = self.csv_df[self.csv_df['sirna'].isin(sirnas_to_keep)]
-        print(len(self.csv_df)) #DEBUG
+            
         # Initialize cell type encoders
         self.cell_type_label_encoder = preprocessing.LabelEncoder()
         cell_type_encoded = self.cell_type_label_encoder.fit_transform(self.csv_df['cell_type'])
