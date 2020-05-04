@@ -625,6 +625,9 @@ if __name__ == '__main__':
     parser.add_argument('model_type')
     parser.add_argument('train_type')
     parser.add_argument('checkpoint_name')
+    parser.add_argument('--normalization', default = None,
+                        help = 'Define normalization across a \'plate\', \'experiment\', or as none.'
+                        '.csv with normalization values must be added to the data folder.')
     parser.add_argument('--num_epochs', default=100,
                         help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
