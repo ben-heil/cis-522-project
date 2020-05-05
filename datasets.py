@@ -18,7 +18,7 @@ def load_metadata_df(csv_path):
     return csv_df
 
 class RecursionDataset(Dataset):
-    def __init__(self, csv_path, root_path, sirna_encoder, mode='train', cell_type=None, sirnas_to_keep=None):
+    def __init__(self, csv_path, root_path, sirna_encoder, mode='train', cell_type=None, sirnas_to_keep=None, args=None):
         self.sirna_encoder = sirna_encoder
 
         csv_path = csv_path.rstrip('/')
