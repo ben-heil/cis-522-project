@@ -375,6 +375,10 @@ def save_checkpoint(model, optimizer, batch_num, base_name):
         'optimizer': optimizer.state_dict()
     }
 
+    if not os.path.exists('saved_models'):
+        os.makedirs('saved_models')
+
+
     save_name = "saved_models/{}_{}.pth".format(base_name, batch_num)
     torch.save(checkpoint, save_name)
 
