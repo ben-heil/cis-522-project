@@ -581,6 +581,8 @@ def get_datasets(args: argparse.Namespace,
                  sirnas_to_keep: List[int] = None,
                  ):
     '''Generate train and val RecursionDataset objects for a given cell type'''
+    print(args.normalization + "here")
+
     train_dir = os.path.join(args.data_dir, 'images', 'train')
     dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
                                train_dir,
