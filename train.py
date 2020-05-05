@@ -581,7 +581,7 @@ def get_datasets(args: argparse.Namespace,
                  sirnas_to_keep: List[int] = None,
                  ):
     '''Generate train and val RecursionDataset objects for a given cell type'''
-    print(args.normalization + "here")
+    
 
     train_dir = os.path.join(args.data_dir, 'images', 'train')
     dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
@@ -645,7 +645,7 @@ if __name__ == '__main__':
         os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
-    print("test", sirnas)
+
     sirnas = sirnas[:50]
 
     control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
@@ -658,7 +658,7 @@ if __name__ == '__main__':
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
-    print(args.normalization)
+
 
     HEPG2_train_data, HEPG2_val_data = get_datasets(
         args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
