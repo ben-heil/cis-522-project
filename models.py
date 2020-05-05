@@ -249,8 +249,7 @@ class MultitaskNet(nn.Module):
 
         self.model = torchvision.models.densenet161(pretrained=True, memory_efficient=True)
         # Make model work with six channels instead of 3
-        # self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
-        self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(10,10), stride=(3,3), padding=(3,3), bias=False)
+        self.model.features.conv0 = nn.Conv2d(6, 96, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         # Make model predict the correct number of classes (1000 comes from output class count in ImageNet)
         self.out_layers = nn.ModuleList([nn.Linear(1000, num_classes) for i in range(num_cell_types)])
         self.loss_fn = nn.CrossEntropyLoss()
