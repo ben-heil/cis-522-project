@@ -35,9 +35,11 @@ class RecursionDataset(Dataset):
 
         # NORMALIZATION: Temporary location (feel free to move somewhere else)
         if self.args.normalization == 'plate':
-          self.stats = pd.read_csv(os.path.join(args.data_dir, 'plate_stats.csv')) #ideally csv filename would not be hardcoded
+            print("running plate normalization")
+            self.stats = pd.read_csv(os.path.join(args.data_dir, 'plate_stats.csv')) #ideally csv filename would not be hardcoded
         elif self.args.normalization == 'experiment':
-          self.stats = pd.read_csv(os.path.join(args.data_dir, 'exp_stats.csv'))
+            print("running experiment normalization")  
+            self.stats = pd.read_csv(os.path.join(args.data_dir, 'exp_stats.csv'))
 
         if sirnas_to_keep is not None:
             self.csv_df = self.csv_df[self.csv_df['sirna'].isin(sirnas_to_keep)]
