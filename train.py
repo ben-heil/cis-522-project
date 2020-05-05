@@ -688,7 +688,8 @@ if __name__ == '__main__':
                                  train_dir,
                                  sirna_encoder,
                                  'train',
-                                 'U2OS'
+                                 'U2OS',
+                                 args=args
                                  )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
