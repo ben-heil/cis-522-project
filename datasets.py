@@ -104,7 +104,7 @@ class RecursionDataset(Dataset):
 
         if self.args.normalization == 'plate':
           # Get all channel where mean & std values are located
-          plate_bool = ( (self.stats['experiment']==experiment) & (self.stats['plate']==plate) )
+          plate_bool = ( (self.stats['experiment']==experiment) & (self.stats['plate']==plate_num) )
           # Create stack of all channel values
           idx = self.stats.index[plate_bool] 
 
