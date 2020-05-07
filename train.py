@@ -789,7 +789,7 @@ if __name__ == '__main__':
     writer = SummaryWriter('logs/erm{}'.format(est_time))
     net = ModelAndLoss(len(sirnas)).to('cuda')
     optimizer = optim.Adam(net.parameters(), lr=1e-5)
-    net_loaded, optimizer_loaded = load_model(
+    net_loaded = load_model(
         net, 'saved_models/erm_kaggle_subset_finished.pth')
     train_erm_load_optimizer(
         net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
