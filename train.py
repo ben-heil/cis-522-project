@@ -637,7 +637,7 @@ if __name__ == '__main__':
     parser.add_argument('normalization',
                         help = 'Define normalization across a \'plate\', \'experiment\', or as none.'
                         '.csv with normalization values must be added to the data folder.')
-    parser.add_argument('--num_epochs', default=100,
+    parser.add_argument('--num_epochs', default=10,
                         help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
