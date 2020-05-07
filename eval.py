@@ -189,13 +189,11 @@ if __name__ == '__main__':
     metadata_df = datasets.load_metadata_df(
         os.path.join(args.data_dir, 'rxrx1.csv'))
 
-
+    control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
+                            's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
     if (args.sirna_selection == 'subset'):
         sirnas = metadata_df['sirna'].unique()
         sirnas = sirnas[:50]
-
-        control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
-                        's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
         control_sirnas_array = np.array(control_sirnas)
         sirnas = np.append(sirnas, control_sirnas_array)
         sirnas = np.unique(sirnas)
@@ -203,6 +201,12 @@ if __name__ == '__main__':
     elif (args.sirna_selection == 'full'):
         sirnas = metadata_df['sirna'].unique()
         print("Sirna selection: Full\t\t\t\t\tNum Sirnas:", len(sirnas))
+    elif (args.sirna_selection == 'control'):
+        # sirnas = np.repeat('EMPTY', 43)
+        control_sirnas_array = np.array(control_sirnas)
+        # sirnas = np.append(sirnas, control_sirnas_array)
+        sirnas = control_sirnas_array
+        print("Sirna selection: control\t\t\t\t\tNum Sirnas:", len(sirnas))
     else:
         print("Sirna selection: INVALID")
 
@@ -245,19 +249,19 @@ if __name__ == '__main__':
 
     if (args.model_type == "densenet"):
         print("Model: densenet")
-        net = DenseNet(len(sirnas)).to('cuda')
+        net = DenseNet(74).to('cuda')
     elif (args.model_type == "kaggle"):
         print("Model: kaggle")
-        net = ModelAndLoss(len(sirnas)).to('cuda')
+        net = ModelAndLoss(74).to('cuda')
     elif(args.model_type == "multitask"):
         print("Model: multitask")
-        net = MultitaskNet(len(sirnas)).to('cuda')
+        net = MultitaskNet(74).to('cuda')
     elif(args.model_type == "lr"):
         print("Model: lr")
-        net = LogisticRegression(512*512*6, len(sirnas)).to('cuda')
+        net = LogisticRegression(512*512*6, 74).to('cuda')
     elif(args.model_type == "cnn"):
         print("Model: cnn")
-        net = CNN(len(sirnas)).to('cuda')
+        net = CNN(74).to('cuda')
     else:
         print("invalid model type")
 

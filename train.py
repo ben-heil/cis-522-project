@@ -631,7 +631,7 @@ def train_baseline(net: nn.Module, train_loader: DataLoader, val_loader: DataLoa
     batches = 0
     print("train loader length {}".format(len(train_loader)))
     print("Val loader length {}".format(len(val_loader)))
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_count = 0
