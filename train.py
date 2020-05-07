@@ -819,14 +819,17 @@ if __name__ == '__main__':
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
     net_loaded = load_model(
         net, 'saved_models/multitask_subset_try_3_finished.pth')
-    train_multitask(net_loaded, loaders, val_loader, writer, args, None)
-    checkpoint = {
-        'state_dict': net_final.state_dict(),
-    }
+    print(net_loaded)
+    for param in model.parameters():
+        param.requires_grad = False
+    # train_multitask(net_loaded, loaders, val_loader, writer, args, None)
+    # checkpoint = {
+    #     'state_dict': net_final.state_dict(),
+    # }
     
-    print("saving")
-    save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
-    torch.save(checkpoint, save_name)
+    # print("saving")
+    # save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
+    # torch.save(checkpoint, save_name)
 
 
     #ERM densenet
