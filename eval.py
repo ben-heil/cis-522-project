@@ -61,7 +61,7 @@ def load_model(model, filename):
 
     return model
 
-def plot_confusion_matrix(correct_labels, predict_labels, labels, display_labels, path, title='Confusion matrix', tensor_name = 'MyFigure/image', normalize=False):
+def plot_confusion_matrix(correct_labels, predict_labels, labels, display_labels, args, title='Confusion matrix', tensor_name = 'MyFigure/image', normalize=False):
   ''' 
   Parameters:
       correct_labels                  : These are your true classification categories.
@@ -110,17 +110,19 @@ def plot_confusion_matrix(correct_labels, predict_labels, labels, display_labels
 #   for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
 #       ax.text(j, i, format(cm[i, j], 'd') if cm[i,j]!=0 else '.', horizontalalignment="center", fontsize=6, verticalalignment='center', color= "black")
   fig.set_tight_layout(True)
-  save_name = 'confusion_matrix/' + path[path.index('/')+1:path.index('.pth')] + ".png"
+  path = args.model_path
+  save_name = 'confusion_matrix/' + path[path.index('/')+1:path.index('.pth')] + '_' + args.sirna_selection + '_' + args.eval_set +  ".png"
   matplotlib.pyplot.savefig(save_name)
+  print("Confusion matrix saved at " + save_name)
   matplotlib.pyplot.show()
 
   return
 
 
-def plot_matrix(correct_labels, predict_labels, path):
+def plot_matrix(correct_labels, predict_labels, args):
     label_domain = [i for i in range(0,74)]
     display_labels = [str(i) for i in range(0,74)]
-    plot_confusion_matrix(correct_labels, predict_labels, label_domain, display_labels, path)
+    plot_confusion_matrix(correct_labels, predict_labels, label_domain, display_labels, args)
 
 
 def eval_model(net: nn.Module, test_loader: DataLoader,
@@ -167,7 +169,7 @@ def eval_model(net: nn.Module, test_loader: DataLoader,
     # print(predicted_labels)
     f1 = f1_score(actual_lables, predicted_labels, average='macro')
     acc = accuracy_score(predicted_labels, actual_lables)
-    plot_matrix(actual_lables, predicted_labels, args.model_path)
+    plot_matrix(actual_lables, predicted_labels, args)
     print('f1:', f1, '\tacc:', acc)
     return net
 
