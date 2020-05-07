@@ -626,6 +626,17 @@ def load_model_optimizer(model, optimizer, filename):
 
     return model, optimizer
 
+def load_model(model, filename):
+    if os.path.isfile(filename):
+        print("Loading file {}".format(filename))
+        checkpoint = torch.load(filename)
+        model.load_state_dict(checkpoint['state_dict'])
+    else:
+        print("no file found at {}".format(filename))
+
+    return model
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -637,7 +648,7 @@ if __name__ == '__main__':
     parser.add_argument('normalization',
                         help = 'Define normalization across a \'plate\', \'experiment\', or as none.'
                         '.csv with normalization values must be added to the data folder.')
-    parser.add_argument('--num_epochs', default=10,
+    parser.add_argument('--num_epochs', default=5,
                         help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
@@ -798,8 +809,8 @@ if __name__ == '__main__':
     net = MultitaskNet(len(sirnas)).to('cuda')
     writer = SummaryWriter('logs/multitask_{}'.format(est_time))
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
-    net_loaded, optimizer_loaded = load_model_optimizer(
-        net, optimizer, 'saved_models/irm_kaggle_44000.pth')
-    train_multitask(net_loaded, loaders, val_loader, writer, args, optimizer_loaded)
+    net_loaded, optimizer_loaded = load_model(
+        net, 'saved_models/multitask_subset_try_3_finished.pth')
+    train_multitask(net_loaded, loaders, val_loader, writer, args, None)
 
     
