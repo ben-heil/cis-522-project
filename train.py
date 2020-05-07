@@ -809,7 +809,7 @@ if __name__ == '__main__':
     net = MultitaskNet(len(sirnas)).to('cuda')
     writer = SummaryWriter('logs/multitask_{}'.format(est_time))
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
-    net_loaded, optimizer_loaded = load_model(
+    net_loaded = load_model(
         net, 'saved_models/multitask_subset_try_3_finished.pth')
     train_multitask(net_loaded, loaders, val_loader, writer, args, None)
 
