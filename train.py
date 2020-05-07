@@ -785,14 +785,14 @@ if __name__ == '__main__':
     # load model changes
 
     # ERM Kaggle
-    # print("latest")
-    # writer = SummaryWriter('logs/erm{}'.format(est_time))
-    # net = ModelAndLoss(len(sirnas)).to('cuda')
-    # optimizer = optim.Adam(net.parameters(), lr=1e-5)
-    # net_loaded, optimizer_loaded = load_model_optimizer(
-    #     net, optimizer, 'saved_models/train_erm_kaggle_continued_24000.pth')
-    # train_erm_load_optimizer(
-    #     net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
+    print("latest")
+    writer = SummaryWriter('logs/erm{}'.format(est_time))
+    net = ModelAndLoss(len(sirnas)).to('cuda')
+    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    net_loaded, optimizer_loaded = load_model(
+        net, 'saved_models/erm_kaggle_subset_finished.pth')
+    train_erm_load_optimizer(
+        net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
 
     # # IRM Kaggle
     # print("kaggle irm continued")
@@ -805,12 +805,12 @@ if __name__ == '__main__':
     #                writer, args, optimizer_loaded)
 
     #Multitask no norm
-    print("multitask no norm continued")
-    net = MultitaskNet(len(sirnas)).to('cuda')
-    writer = SummaryWriter('logs/multitask_{}'.format(est_time))
-    optimizer = optim.Adam(net.parameters(), lr=1e-4)
-    net_loaded = load_model(
-        net, 'saved_models/multitask_subset_try_3_finished.pth')
-    train_multitask(net_loaded, loaders, val_loader, writer, args, None)
+    # print("multitask no norm continued")
+    # net = MultitaskNet(len(sirnas)).to('cuda')
+    # writer = SummaryWriter('logs/multitask_{}'.format(est_time))
+    # optimizer = optim.Adam(net.parameters(), lr=1e-4)
+    # net_loaded = load_model(
+    #     net, 'saved_models/multitask_subset_try_3_finished.pth')
+    # train_multitask(net_loaded, loaders, val_loader, writer, args, None)
 
     
