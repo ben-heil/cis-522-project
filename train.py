@@ -791,8 +791,16 @@ if __name__ == '__main__':
     optimizer = optim.Adam(net.parameters(), lr=1e-5)
     net_loaded = load_model(
         net, 'saved_models/erm_kaggle_subset_finished.pth')
-    train_erm_load_optimizer(
+    net_final= train_erm_load_optimizer(
         net_loaded, combined_train_loader, val_loader, writer, args, optimizer)
+
+    checkpoint = {
+        'state_dict': net_final.state_dict(),
+    }
+    
+    print("saving")
+    save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
+    torch.save(checkpoint, save_name)
 
     # # IRM Kaggle
     # print("kaggle irm continued")
