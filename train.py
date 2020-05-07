@@ -792,7 +792,7 @@ if __name__ == '__main__':
     net_loaded = load_model(
         net, 'saved_models/erm_kaggle_subset_finished.pth')
     train_erm_load_optimizer(
-        net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
+        net_loaded, combined_train_loader, val_loader, writer, args, optimizer)
 
     # # IRM Kaggle
     # print("kaggle irm continued")
