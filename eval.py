@@ -34,17 +34,22 @@ import itertools
 import matplotlib
 import matplotlib.pyplot as plt
 
+def get_est_time():
+    time_format = "%Y-%m-%d.%Hhours_%Mminutes_%Sseconds"
+    current_time = datetime.now(timezone('US/Eastern'))
+    return current_time.strftime(time_format)
+
 def get_test_datasets(args: argparse.Namespace,
                  cell_type: str,
                  sirna_encoder: skl.preprocessing.LabelEncoder,
                  sirnas_to_keep: List[int] = None,
                  ):
     '''Generate test RecursionDataset objects for a given cell type'''
-    test_dir = os.path.join(args.data_dir, 'images', 'test')
+    test_dir = os.path.join(args.data_dir, 'images', args.dataset)
     dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
                                test_dir,
                                sirna_encoder,
-                               'test',
+                               args.dataset,
                                cell_type,
                                sirnas_to_keep=sirnas_to_keep,
                                )
@@ -107,11 +112,9 @@ def plot_confusion_matrix(correct_labels, predict_labels, labels, display_labels
   ax.yaxis.set_label_position('left')
   ax.yaxis.tick_left()
 
-#   for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-#       ax.text(j, i, format(cm[i, j], 'd') if cm[i,j]!=0 else '.', horizontalalignment="center", fontsize=6, verticalalignment='center', color= "black")
   fig.set_tight_layout(True)
   path = args.model_path
-  save_name = 'confusion_matrix/' + path[path.index('/')+1:path.index('.pth')] + '_' + args.sirna_selection + '_' + args.eval_set +  ".png"
+  save_name = path[0:path.index('.pth')] + '_' + args.dataset + '_' + args.sirna_selection + '_' + args.eval_set +  '_' + str(get_est_time()) + ".png"
   matplotlib.pyplot.savefig(save_name)
   print("Confusion matrix saved at " + save_name)
   matplotlib.pyplot.show()
@@ -158,19 +161,11 @@ def eval_model(net: nn.Module, test_loader: DataLoader,
             # print(len(predicted_labels), len(pred))
             predicted_labels.extend(pred.tolist())
 
-    # val_loss = val_loss / val_count
-    # val_acc = val_correct / val_count
-
-    # print('Loss/val', val_loss)
-    # print('Acc/val', val_acc)
-    
-    # use predicted, actuals to compute metrics 
-    # print(actual_lables)
-    # print(predicted_labels)
     f1 = f1_score(actual_lables, predicted_labels, average='macro')
     acc = accuracy_score(predicted_labels, actual_lables)
-    plot_matrix(actual_lables, predicted_labels, args)
     print('f1:', f1, '\tacc:', acc)
+    plot_matrix(actual_lables, predicted_labels, args)
+
     return net
 
 
@@ -180,7 +175,8 @@ if __name__ == '__main__':
                                          '(called rxrx1 by default)')
     parser.add_argument('model_type')
     parser.add_argument('model_path')
-    
+    parser.add_argument('dataset')
+
     parser.add_argument('--sirna_selection', default="subset",
                         help='subset or full')
     parser.add_argument('--eval_set', default="holdout",
@@ -214,6 +210,7 @@ if __name__ == '__main__':
     labels = sirna_encoder.fit_transform(sirnas)
 
     # Create Dataset by Cell Type
+    print('dataset: ', args.dataset)
     HEPG2_test_data = get_test_datasets(args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
     HUVEC_test_data = get_test_datasets(args, 'HUVEC', sirna_encoder, sirnas_to_keep=sirnas)
     RPE_test_data = get_test_datasets(args, 'RPE', sirna_encoder, sirnas_to_keep=sirnas)
