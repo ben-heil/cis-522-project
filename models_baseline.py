@@ -17,11 +17,30 @@ class LogisticRegression(torch.nn.Module):
         self.linear = torch.nn.Linear(input_dim, num_classes)
         self.input_dim = input_dim
         self.num_classes = num_classes
+        self.loss_fn = nn.CrossEntropyLoss()
+
     def forward(self, x):
         x = x.view(-1, self.input_dim)
         outputs = self.linear(x)
         return outputs
-    
+
+    def train_forward(self, x, s, y, dummy_w=None):
+        x = x.view(-1, self.input_dim)
+        output = self.linear(x)
+
+        loss = None
+        if dummy_w is not None:
+            loss = self.loss_fn(dummy_w * output, y)
+        else:
+            loss = self.loss_fn(output, y)
+
+        num_correct = accuracy_score(output.max(1)[1].cpu().numpy(), y.squeeze().cpu().numpy(), normalize=False)
+        return loss, num_correct
+
+    def eval_forward(self, x, s):
+        x = x.view(-1, self.input_dim)
+        output = self.linear(x)
+        return output
     
 class CNN(nn.Module):
   def __init__(self, num_classes): 
@@ -43,9 +62,30 @@ class CNN(nn.Module):
                                     nn.Linear(256, 128),
                                     nn.ReLU(inplace = True),
                                     nn.Linear(128, num_classes))
-  
+    self.loss_fn = nn.CrossEntropyLoss()
+    
   def forward(self, x): 
     x = self.features(x)
     x = x.view(x.size(0),-1)
     out = self.classifier(x)
     return out 
+  
+  def train_forward(self, x, s, y, dummy_w=None):
+    x = self.features(x)
+    x = x.view(x.size(0),-1)
+    output = self.classifier(x)
+
+    loss = None
+    if dummy_w is not None:
+        loss = self.loss_fn(dummy_w * output, y)
+    else:
+        loss = self.loss_fn(output, y)
+
+    num_correct = accuracy_score(output.max(1)[1].cpu().numpy(), y.squeeze().cpu().numpy(), normalize=False)
+    return loss, num_correct
+
+  def eval_forward(self, x, s):
+    x = self.features(x)
+    x = x.view(x.size(0),-1)
+    out = self.classifier(x)
+    return out

@@ -25,7 +25,7 @@ from tqdm import tqdm
 import datasets
 from datasets import RecursionDataset
 from models import ModelAndLoss, DenseNet, MultitaskNet
-
+from models_baseline import LogisticRegression, CNN
 
 def compute_irm_penalty(loss, dummy_w):
     '''Calculate the invariance penalty for the classifier. This penalty is the norm of the
@@ -618,6 +618,96 @@ def load_model_optimizer(model, optimizer, filename):
     return model, optimizer
 
 
+
+def train_baseline(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
+              writer: SummaryWriter, args: argparse.Namespace):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+
+    # dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device) # dummy = 1
+    dummy_w = None
+
+    batches = 0
+    print("train loader length {}".format(len(train_loader)))
+    print("Val loader length {}".format(len(val_loader)))
+    for epoch in tqdm(range(args.num_epochs)):
+        train_correct = 0
+        train_loss = 0
+        train_count = 0
+
+        for batch in train_loader:
+
+            image, cell_type, labels = batch
+            image = image.float().to(device)
+            labels = labels.to(device)
+            cell_type = cell_type.to(
+                device).float().view(-1, cell_type.size(-1))
+            train_count += len(labels)
+
+            optimizer.zero_grad()
+
+            loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
+
+            train_correct += acc
+
+            train_loss += loss.item()
+            loss.backward(retain_graph=False)  # modification here
+            optimizer.step()
+
+            if batches % 100 == 0:
+                train_loss = train_loss / train_count
+                train_acc = train_correct / train_count
+
+                writer.add_scalar('Loss/train', train_loss, batches)
+                writer.add_scalar('Acc/train', train_acc, batches)
+
+                print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                      (epoch, batches, train_acc))
+
+            if batches % 5000 == 0:
+                save_checkpoint(net, optimizer, batches, args.checkpoint_name)
+
+            batches += 1
+
+        val_loss = 0
+        val_correct = 0
+        val_count = 0
+        # Speed up validation by telling torch not to worry about computing gradients
+
+        with torch.no_grad():
+            print("validation")
+            for val_batch in val_loader:
+
+                if (val_count % 100 == 0):
+                    print("val batch {}".format(val_count))
+
+                images, cell_type, labels = val_batch
+                val_images = images.float().to(device)
+                val_labels = labels.to(device)
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+
+                val_count += len(labels)
+
+                with torch.no_grad():
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
+                    val_loss += loss.item()
+                    val_correct += acc
+
+        val_loss = val_loss / val_count
+        val_acc = val_correct / val_count
+
+        if writer is not None:
+            writer.add_scalar('Loss/val', val_loss, epoch)
+            writer.add_scalar('Acc/val', val_acc, epoch)
+
+    save_checkpoint(net, optimizer, batches,
+                    "{}_final".format(args.checkpoint_name))
+    return net
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', help='The path to the root of the data directory '
@@ -698,6 +788,12 @@ if __name__ == '__main__':
     elif(args.model_type == "multitask"):
         print("you picked multitask")
         net = MultitaskNet(len(sirnas)).to('cuda')
+    elif(args.model_type == "lr"):
+        print("you picked lr")
+        net = LogisticRegression(512*512*6, len(sirnas)).to('cuda')
+    elif(args.model_type == "cnn"):
+        print("you picked cnn")
+        net = CNN(len(sirnas)).to('cuda')
     else:
         print("invalid model type")
 
@@ -714,6 +810,10 @@ if __name__ == '__main__':
         print("training with multitask")
         writer = SummaryWriter('logs/multitask_{}'.format(est_time))
         train_multitask(net, loaders, val_loader, writer, args)
+    elif (args.train_type == 'baseline'):
+        print("training with baseline")
+        writer = SummaryWriter('logs/baseline_{}'.format(est_time))
+        train_baseline(net, combined_train_loader, val_loader, writer, args)
     else:
         print("invalid train type")
 
