@@ -39,7 +39,7 @@ def compute_irm_penalty(loss, dummy_w):
 
 
 def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataLoader,
-                    writer: SummaryWriter, args: argparse.Namespace):
+                    writer: SummaryWriter, args: argparse.Namespace, optimizer: optim.Adam):
     '''Train the given multitask network using.
 
     Arguments
@@ -63,7 +63,9 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
-    optimizer = optim.Adam(net.parameters(), lr=1e-4)
+
+    if (optimizer == None):
+        optimizer = optim.Adam(net.parameters(), lr=1e-4)
 
     batches = 0
     for epoch in tqdm(range(args.num_epochs)):
@@ -670,9 +672,17 @@ if __name__ == '__main__':
         args, 'HUVEC', sirna_encoder, sirnas_to_keep=sirnas)
     RPE_train_data, RPE_val_data = get_datasets(
         args, 'RPE', sirna_encoder, sirnas_to_keep=sirnas)
+    U2OS_train_data, U2OS_val_data = get_datasets(args, "U2OS", sirna_encoder, sirnas_to_keep=sirnas)
+    
     combined_train_data = ConcatDataset(
-        [HEPG2_train_data, HUVEC_train_data, RPE_train_data])
-    val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
+        [U2OS_train_data])
+
+    
+    # combined_train_data = ConcatDataset(
+    #     [HEPG2_train_data, HUVEC_train_data, RPE_train_data])
+
+
+    val_data = ConcatDataset([U2OS_val_data])
 
     # subset_indices = list(range(0, len(val_data), 100))
 
@@ -681,62 +691,71 @@ if __name__ == '__main__':
     HUVEC_train_loader = DataLoader(
         HUVEC_train_data, batch_size=16, shuffle=True)
     RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=True)
+    U2OS_train_loader = DataLoader(U2OS_train_data, batch_size=16, shuffle=True)
+
+    # combined_train_loader = DataLoader(
+    #     combined_train_data, batch_size=16, shuffle=True)
+
+
+
     combined_train_loader = DataLoader(
         combined_train_data, batch_size=16, shuffle=True)
 
     val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
-    train_dir = os.path.join(args.data_dir, 'images', 'train')
-    U2OS_data = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
-                                 train_dir,
-                                 sirna_encoder,
-                                 'train',
-                                 'U2OS',
-                                 args=args
-                                 )
-    U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
+    # train_dir = os.path.join(args.data_dir, 'images', 'train')
+    # U2OS_data = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
+    #                              train_dir,
+    #                              sirna_encoder,
+    #                              'train',
+    #                              'U2OS',
+    #                              args=args
+    #                              )
+    # U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
-    loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
+
+    loaders = [U2OS_train_loader]
+    # loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
     est_time = get_est_time()
 
     net = None
 
-    if (args.model_type == "densenet"):
-        print("you picked densenet")
-        net = DenseNet(len(sirnas)).to('cuda')
-    elif (args.model_type == "kaggle"):
-        print("you picked kaggle")
-        net = ModelAndLoss(len(sirnas)).to('cuda')
-    elif(args.model_type == "multitask"):
-        print("you picked multitask")
-        net = MultitaskNet(len(sirnas)).to('cuda')
-    else:
-        print("invalid model type")
+    # if (args.model_type == "densenet"):
+    #     print("you picked densenet")
+    #     net = DenseNet(len(sirnas)).to('cuda')
+    # elif (args.model_type == "kaggle"):
+    #     print("you picked kaggle")
+    #     net = ModelAndLoss(len(sirnas)).to('cuda')
+    # elif(args.model_type == "multitask"):
+    #     print("you picked multitask")
+    #     net = MultitaskNet(len(sirnas)).to('cuda')
+    # else:
+    #     print("invalid model type")
 
-    if (args.train_type == 'erm'):
-        print("training with erm")
-        writer = SummaryWriter('logs/erm{}'.format(est_time))
-        train_erm(net, combined_train_loader, val_loader, writer, args)
-    elif (args.train_type == 'irm'):
-        print("training with irm")
-        writer = SummaryWriter('logs/irm{}'.format(est_time))
+    # if (args.train_type == 'erm'):
+    #     print("training with erm")
+    #     writer = SummaryWriter('logs/erm{}'.format(est_time))
+    #     train_erm(net, combined_train_loader, val_loader, writer, args)
+    # elif (args.train_type == 'irm'):
+    #     print("training with irm")
+    #     writer = SummaryWriter('logs/irm{}'.format(est_time))
 
-        train_irm(net, loaders, val_loader, writer, args)
-    elif (args.train_type == 'multitask'):
-        print("training with multitask")
-        writer = SummaryWriter('logs/multitask_{}'.format(est_time))
-        train_multitask(net, loaders, val_loader, writer, args)
-    else:
-        print("invalid train type")
+    #     train_irm(net, loaders, val_loader, writer, args)
+    # elif (args.train_type == 'multitask'):
+    #     print("training with multitask")
+    #     writer = SummaryWriter('logs/multitask_{}'.format(est_time))
+    #     train_multitask(net, loaders, val_loader, writer, args, None)
+    # else:
+    #     print("invalid train type")
 
-    print("save final net")
-    checkpoint = {
-        'state_dict': net.state_dict(),
-    }
+    # print("save final net")
+    # checkpoint = {
+    #     'state_dict': net.state_dict(),
+    # }
 
-    save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
-    torch.save(checkpoint, save_name)
+    # save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
+    # torch.save(checkpoint, save_name)
 
 
 
@@ -764,7 +783,7 @@ if __name__ == '__main__':
     # train_erm_load_optimizer(
     #     net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
 
-    # IRM Kaggle
+    # # IRM Kaggle
     # print("kaggle irm continued")
     # net = ModelAndLoss(len(sirnas)).to('cuda')
     # writer = SummaryWriter('logs/irm{}'.format(est_time))
@@ -773,3 +792,14 @@ if __name__ == '__main__':
     #     net, optimizer, 'saved_models/irm_kaggle_44000.pth')
     # train_irm_load(net_loaded, loaders, val_loader,
     #                writer, args, optimizer_loaded)
+
+    #Multitask no norm
+    print("multitask no norm continued")
+    net = MultitaskNet(len(sirnas)).to('cuda')
+    writer = SummaryWriter('logs/multitask_{}'.format(est_time))
+    optimizer = optim.Adam(net.parameters(), lr=1e-4)
+    net_loaded, optimizer_loaded = load_model_optimizer(
+        net, optimizer, 'saved_models/irm_kaggle_44000.pth')
+    train_multitask(net_loaded, loaders, val_loader, writer, args, optimizer_loaded)
+
+    
