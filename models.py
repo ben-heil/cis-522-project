@@ -1,6 +1,8 @@
 '''This file contains the model classes for use in predicting cell perturbations.
-The code is a modified version of
+The code for Model, ModelAndLoss, and their subclasses are a modified version of
 https://github.com/maciej-sypetkowski/kaggle-rcic-1st/blob/master/model.py
+The code for DenseNet and MultitaskNet was written by our team to
+match the API present in ModelAndLoss to allow uniform training
 '''
 
 import math
@@ -271,10 +273,15 @@ class MultitaskNet(nn.Module):
         return loss, num_correct
 
     def eval_forward(self, x, s):
-        representation = self.model(x)
+        with torch.no_grad():
+            representation = self.model(x)
 
-        # Select classifier based on cell type
-        # Note: this is assuming all items in the batch are the same cell type
-        classifier_index = s[0, :].argmax()
-        output = self.out_layers[classifier_index](representation)
-        return output
+            prediction_sum = None
+            for layer in self.out_layers:
+                out = layer(representation)
+                if prediction_sum is None:
+                    prediction_sum = out
+                else:
+                    prediction_sum += out
+
+        return prediction_sum
