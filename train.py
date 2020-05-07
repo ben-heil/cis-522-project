@@ -785,22 +785,22 @@ if __name__ == '__main__':
     # load model changes
 
     # ERM Kaggle
-    print("latest")
-    writer = SummaryWriter('logs/erm{}'.format(est_time))
-    net = ModelAndLoss(len(sirnas)).to('cuda')
-    optimizer = optim.Adam(net.parameters(), lr=1e-5)
-    net_loaded = load_model(
-        net, 'saved_models/erm_kaggle_subset_finished.pth')
-    net_final= train_erm_load_optimizer(
-        net_loaded, combined_train_loader, val_loader, writer, args, optimizer)
+    # print("latest")
+    # writer = SummaryWriter('logs/erm{}'.format(est_time))
+    # net = ModelAndLoss(len(sirnas)).to('cuda')
+    # optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    # net_loaded = load_model(
+    #     net, 'saved_models/erm_kaggle_subset_finished.pth')
+    # net_final= train_erm_load_optimizer(
+    #     net_loaded, combined_train_loader, val_loader, writer, args, optimizer)
 
-    checkpoint = {
-        'state_dict': net_final.state_dict(),
-    }
+    # checkpoint = {
+    #     'state_dict': net_final.state_dict(),
+    # }
     
-    print("saving")
-    save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
-    torch.save(checkpoint, save_name)
+    # print("saving")
+    # save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
+    # torch.save(checkpoint, save_name)
 
     # # IRM Kaggle
     # print("kaggle irm continued")
@@ -820,5 +820,24 @@ if __name__ == '__main__':
     # net_loaded = load_model(
     #     net, 'saved_models/multitask_subset_try_3_finished.pth')
     # train_multitask(net_loaded, loaders, val_loader, writer, args, None)
+
+    #ERM densenet
+    print("latest")
+    writer = SummaryWriter('logs/erm{}'.format(est_time))
+    net = DenseNet(len(sirnas)).to('cuda')
+    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    net_loaded = load_model(
+        net, 'saved_models/densenet_erm_subset_finished.pth')
+    net_final= train_erm_load_optimizer(
+        net_loaded, combined_train_loader, val_loader, writer, args, optimizer)
+
+    checkpoint = {
+        'state_dict': net_final.state_dict(),
+    }
+    
+    print("saving")
+    save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
+    torch.save(checkpoint, save_name)
+
 
     
