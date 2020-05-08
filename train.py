@@ -58,9 +58,6 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
     net:
         The network after training is finished
     '''
-    print("train loader length {}".format(len(train_loaders)))
-    print("Val loader length {}".format(len(val_loader)))
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
@@ -77,8 +74,7 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
                 image, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
-                cell_type = cell_type.to(
-                    device).float().view(-1, cell_type.size(-1))
+                cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
                 train_count += len(labels)
 
                 optimizer.zero_grad()
@@ -227,14 +223,12 @@ def train_irm_load(net: nn.Module, train_loaders: List[DataLoader], val_loader: 
                 images, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
-                val_cell_type = cell_type.to(
-                    device).float().view(-1, cell_type.size(-1))
+                val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
 
                 val_count += len(labels)
 
                 with torch.no_grad():
-                    loss, acc = net.train_forward(
-                        val_images, val_cell_type, val_labels)
+                    loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
                     val_correct += acc
 
@@ -273,9 +267,6 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
     net:
         The network after training is finished
     '''
-    print("train loader length {}".format(len(train_loaders)))
-    print("Val loader length {}".format(len(val_loader)))
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
@@ -294,13 +285,11 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                 image, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
-                cell_type = cell_type.to(
-                    device).float().view(-1, cell_type.size(-1))
+                cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
                 train_count += len(labels)
 
                 optimizer.zero_grad()
-                loss, acc = net.train_forward(
-                    image, cell_type, labels, dummy_w)
+                loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
                 train_raw_loss += loss.item()
                 train_correct += acc
 
@@ -455,8 +444,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
                 val_count += len(labels)
 
                 with torch.no_grad():
-                    loss, acc = net.train_forward(
-                        val_images, val_cell_type, val_labels)
+                    loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
                     val_correct += acc
 
@@ -506,24 +494,20 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         train_correct = 0
         train_loss = 0
         train_count = 0
-
         for batch in train_loader:
-
             image, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
-            cell_type = cell_type.to(
-                device).float().view(-1, cell_type.size(-1))
+            cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
             train_count += len(labels)
 
             optimizer.zero_grad()
-
             loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
 
             train_correct += acc
 
             train_loss += loss.item()
-            loss.backward(retain_graph=False)  # modification here
+            loss.backward(retain_graph=False)
             optimizer.step()
 
             if batches % 100 == 0:
@@ -562,8 +546,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
                 val_count += len(labels)
 
                 with torch.no_grad():
-                    loss, acc = net.train_forward(
-                        val_images, val_cell_type, val_labels)
+                    loss, acc = net.train_forward(val_images, val_cell_type, val_labels)
                     val_loss += loss.item()
                     val_correct += acc
 

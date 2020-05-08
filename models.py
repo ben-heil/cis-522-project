@@ -220,12 +220,7 @@ class DenseNet(nn.Module):
         self.loss_fn = nn.CrossEntropyLoss()
 
     def train_forward(self, x, s, y, dummy_w=None):
-
-        # print(self.model)
-        har =self.model(x)
-
-        output = self.out_layer(har)
-
+        output = self.out_layer(self.model(x))
 
         loss = None
         if dummy_w is not None:
