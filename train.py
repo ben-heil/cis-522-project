@@ -67,7 +67,7 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
         train_count = 0
         for env_loader in train_loaders:
             for batch in env_loader:
-                image, cell_type, labels = batch
+                image, _, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
                 cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -156,7 +156,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         train_count = 0
         for env_loader in train_loaders:
             for batch in env_loader:
-                image, cell_type, labels = batch
+                image, _, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
                 cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -197,7 +197,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -252,7 +252,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         train_loss = 0
         train_count = 0
         for batch in train_loader:
-            image, cell_type, labels = batch
+            image, _, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
             cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -282,7 +282,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -316,7 +316,8 @@ def get_datasets(args: argparse.Namespace,
                                sirna_encoder,
                                'train',
                                cell_type,
-                               sirnas_to_keep=sirnas_to_keep
+                               sirnas_to_keep=sirnas_to_keep,
+                               args = args
                               )
     data_len = len(dataset)
     train_data, val_data = torch.utils.data.random_split(dataset, (data_len - data_len // 10,
