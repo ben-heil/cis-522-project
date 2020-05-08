@@ -147,7 +147,7 @@ def eval_model(net: nn.Module, test_loader: DataLoader,
             if (val_count % 100 == 0):
                 print("eval batch {}".format(val_count))
 
-            images, cell_type, labels = test_batch
+            images, _, cell_type, labels = test_batch
             val_images = images.float().to(device)
             val_labels = labels.to(device)
             val_cell_type = cell_type.to(

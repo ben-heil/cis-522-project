@@ -63,7 +63,7 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
 
     batches = 0
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_penalty = 0
@@ -162,7 +162,7 @@ def train_irm_load(net: nn.Module, train_loaders: List[DataLoader], val_loader: 
     dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
 
     batches = 0
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_penalty = 0
@@ -274,7 +274,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
     dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
 
     batches = 0
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_penalty = 0
@@ -383,7 +383,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
     batches = 0
     print("train loader length {}".format(len(train_loader)))
     print("Val loader length {}".format(len(val_loader)))
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_count = 0
@@ -486,7 +486,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
     batches = 0
     print("train loader length {}".format(len(train_loader)))
     print("Val loader length {}".format(len(val_loader)))
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_count = 0
@@ -800,39 +800,3 @@ if __name__ == '__main__':
 
     save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
     torch.save(checkpoint, save_name)
-
-
-
-    # Initialize netork
-    # net = ModelAndLoss(len(sirnas)).to('cuda')
-    # net = DenseNet(len(sirnas)).to('cuda')
-    # net = MultitaskNet(len(sirnas)).to('cuda')
-
-    # Unloaded
-    # train_erm(net, combined_train_loader, val_loader, writer, args)
-    # writer = SummaryWriter('logs/irm{}'.format(est_time))
-    # train_irm(net, loaders, val_loader, writer, args)
-    # writer = SummaryWriter('logs/multitask_{}'.format(est_time))
-    # train_multitask(net, loaders, val_loader, writer, args)
-
-    # load model changes
-
-    # ERM Kaggle
-    # print("latest")
-    # writer = SummaryWriter('logs/erm{}'.format(est_time))
-    # net = ModelAndLoss(len(sirnas)).to('cuda')
-    # optimizer = optim.Adam(net.parameters(), lr=1e-5)
-    # net_loaded, optimizer_loaded = load_model_optimizer(
-    #     net, optimizer, 'saved_models/train_erm_kaggle_continued_24000.pth')
-    # train_erm_load_optimizer(
-    #     net_loaded, combined_train_loader, val_loader, writer, args, optimizer_loaded)
-
-    # IRM Kaggle
-    # print("kaggle irm continued")
-    # net = ModelAndLoss(len(sirnas)).to('cuda')
-    # writer = SummaryWriter('logs/irm{}'.format(est_time))
-    # optimizer = optim.Adam(net.parameters(), lr=1e-4)
-    # net_loaded, optimizer_loaded = load_model_optimizer(
-    #     net, optimizer, 'saved_models/irm_kaggle_44000.pth')
-    # train_irm_load(net_loaded, loaders, val_loader,
-    #                writer, args, optimizer_loaded)
