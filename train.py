@@ -375,6 +375,10 @@ def save_checkpoint(model, optimizer, batch_num, base_name):
         'optimizer': optimizer.state_dict()
     }
 
+    if not os.path.exists('saved_models'):
+        os.makedirs('saved_models')
+
+
     save_name = "saved_models/{}_{}.pth".format(base_name, batch_num)
     torch.save(checkpoint, save_name)
 
@@ -581,6 +585,8 @@ def get_datasets(args: argparse.Namespace,
                  sirnas_to_keep: List[int] = None,
                  ):
     '''Generate train and val RecursionDataset objects for a given cell type'''
+    
+
     train_dir = os.path.join(args.data_dir, 'images', 'train')
     dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
                                train_dir,
@@ -588,6 +594,7 @@ def get_datasets(args: argparse.Namespace,
                                'train',
                                cell_type,
                                sirnas_to_keep=sirnas_to_keep,
+                               args=args
                                )
     data_len = len(dataset)
     train_data, val_data = torch.utils.data.random_split(dataset, (data_len - data_len // 10,
@@ -715,6 +722,9 @@ if __name__ == '__main__':
     parser.add_argument('model_type')
     parser.add_argument('train_type')
     parser.add_argument('checkpoint_name')
+    parser.add_argument('normalization',
+                        help = 'Define normalization across a \'plate\', \'experiment\', or as none.'
+                        '.csv with normalization values must be added to the data folder.')
     parser.add_argument('--num_epochs', default=100,
                         help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
@@ -729,7 +739,7 @@ if __name__ == '__main__':
         os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
-    print("test", sirnas)
+
     sirnas = sirnas[:50]
 
     control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
@@ -741,6 +751,8 @@ if __name__ == '__main__':
 
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
+
+
 
     HEPG2_train_data, HEPG2_val_data = get_datasets(
         args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
@@ -770,7 +782,8 @@ if __name__ == '__main__':
                                  train_dir,
                                  sirna_encoder,
                                  'train',
-                                 'U2OS'
+                                 'U2OS',
+                                 args=args
                                  )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 

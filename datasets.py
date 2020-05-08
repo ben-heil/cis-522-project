@@ -18,8 +18,10 @@ def load_metadata_df(csv_path):
     return csv_df
 
 class RecursionDataset(Dataset):
-    def __init__(self, csv_path, root_path, sirna_encoder, mode='train', cell_type=None, sirnas_to_keep=None):
+    def __init__(self, csv_path, root_path, sirna_encoder, mode='train', cell_type=None, sirnas_to_keep=None, args=None):
         self.sirna_encoder = sirna_encoder
+
+        
 
         csv_path = csv_path.rstrip('/')
         if not os.path.exists(csv_path):
@@ -29,10 +31,19 @@ class RecursionDataset(Dataset):
         root_path = root_path.rstrip('/')
 
         self.csv_df = load_metadata_df(csv_path)
+        self.args = args
+
+        # NORMALIZATION: Temporary location (feel free to move somewhere else)
+        if self.args.normalization == 'plate':
+            print("running plate normalization")
+            self.stats = pd.read_csv(os.path.join(args.data_dir, 'plate_stats.csv')) #ideally csv filename would not be hardcoded
+        elif self.args.normalization == 'experiment':
+            print("running experiment normalization")  
+            self.stats = pd.read_csv(os.path.join(args.data_dir, 'exp_stats.csv'))
 
         if sirnas_to_keep is not None:
             self.csv_df = self.csv_df[self.csv_df['sirna'].isin(sirnas_to_keep)]
-
+            
         # Initialize cell type encoders
         self.cell_type_label_encoder = preprocessing.LabelEncoder()
         cell_type_encoded = self.cell_type_label_encoder.fit_transform(self.csv_df['cell_type'])
@@ -91,6 +102,24 @@ class RecursionDataset(Dataset):
 
         return_x = self.create_img_tensor(experiment, plate_num, well, site)
 
+        if self.args.normalization == 'plate':
+          # Get all channel where mean & std values are located
+          plate_bool = ( (self.stats['experiment']==experiment) & (self.stats['plate']==plate_num) )
+          # Create stack of all channel values
+          idx = self.stats.index[plate_bool] 
+
+          pixel_mean = torch.tensor(self.stats['mean'][idx].to_numpy()) # Get mean
+          pixel_std = torch.tensor(self.stats['std'][idx].to_numpy()) # Get std
+          return_x = (return_x - pixel_mean.reshape(-1,1,1)) / pixel_std.reshape(-1,1,1) # Normalize
+        elif self.args.normalization == 'experiment':
+          # Get all channel where mean & std values are located
+          exp_bool = (self.stats['experiment']==experiment)
+          # Create stack of all channel values
+          idx = self.stats.index[exp_bool]
+
+          pixel_mean = torch.tensor(self.stats['mean'][idx].to_numpy()) # Get mean
+          pixel_std = torch.tensor(self.stats['std'][idx].to_numpy()) # Get std
+          return_x = (return_x - pixel_mean.reshape(-1,1,1)) / pixel_std.reshape(-1,1,1) # Normalize
         return return_x, cell_type, sirna_label
 
     def __len__(self):
