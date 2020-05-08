@@ -6,6 +6,8 @@ standard neural network trainnig (empirical risk minimization)
 import argparse
 import os
 import time
+from pytz import timezone
+from datetime import datetime
 from typing import List
 
 import numpy as np
@@ -14,14 +16,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import grad
-from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data import DataLoader, ConcatDataset, Subset
+from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+
 
 import datasets
 from datasets import RecursionDataset
 from models import ModelAndLoss, DenseNet, MultitaskNet
-
+from models_baseline import LogisticRegression, CNN
 
 def compute_irm_penalty(loss, dummy_w):
     '''Calculate the invariance penalty for the classifier. This penalty is the norm of the
@@ -59,7 +63,7 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
     optimizer = optim.Adam(net.parameters(), lr=1e-4)
 
     batches = 0
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_penalty = 0
@@ -88,8 +92,14 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
 
                     writer.add_scalar('Loss/train', train_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
-                batches += 1
+                    print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                          (epoch, batches, train_acc))
 
+                
+                if batches % 5000 == 0:
+                    save_checkpoint(net, optimizer, batches,
+                                    args.checkpoint_name)
+                batches += 1
 
         val_loss = 0
         val_correct = 0
@@ -97,7 +107,120 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
+                val_images = images.float().to(device)
+                val_labels = labels.to(device)
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+
+                val_count += len(labels)
+
+                with torch.no_grad():
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
+                    val_loss += loss.item()
+                    val_correct += acc
+
+        val_loss = val_loss / val_count
+        val_acc = val_correct / val_count
+
+        if writer is not None:
+            writer.add_scalar('Loss/val', val_loss, epoch)
+            writer.add_scalar('Acc/val', val_acc, epoch)
+
+    return net
+
+
+def train_irm_load(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataLoader, writer: SummaryWriter,
+                   args: argparse.Namespace, optimizer: optim.Adam):
+    '''Train the given network using invariant risk minimization. This code is based on my
+    implementation of IRM in https://github.com/ben-heil/whistl/, and by extension the original
+    implementation by Arjovsky et al. 2019
+
+    Arguments
+    ---------
+    net:
+        The network to train
+    train_loaders:
+        A list containing a DataLoader for each environment
+    val_loader:
+        The dataloader containing the validation dataset
+    writer:
+        The SummaryWriter to write results to
+
+    Returns
+    -------
+    net:
+        The network after training is finished
+    '''
+    print("train loader length {}".format(len(train_loaders)))
+    print("Val loader length {}".format(len(val_loader)))
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+
+    dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
+
+    batches = 0
+    for epoch in tqdm(range(int(args.num_epochs))):
+        train_correct = 0
+        train_loss = 0
+        train_penalty = 0
+        train_raw_loss = 0
+        train_count = 0
+        for env_loader in train_loaders:
+            for batch in env_loader:
+                image, _, cell_type, labels = batch
+                image = image.float().to(device)
+                labels = labels.to(device)
+                cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+                train_count += len(labels)
+
+                optimizer.zero_grad()
+                loss, acc = net.train_forward(
+                    image, cell_type, labels, dummy_w)
+                train_raw_loss += loss.item()
+                train_correct += acc
+
+                # This penalty is the norm of the gradient of 1 * the loss function.
+                # The penalty helps keep the model from ignoring one study to the benefit
+                # of the others, and the theoretical basis can be found in the Invariant
+                # Risk Minimization paper
+                penalty = compute_irm_penalty(loss, dummy_w)
+                train_penalty += penalty.item()
+
+                # Calculate the gradient of the combined loss function
+                combined_loss = args.loss_scaling_factor * loss + penalty
+                train_loss += combined_loss.item()
+                combined_loss.backward(retain_graph=False)
+                optimizer.step()
+
+                if batches % 100 == 0:
+                    train_loss = train_loss / train_count
+                    train_raw_loss = train_raw_loss / train_count
+                    train_acc = train_correct / train_count
+
+                    writer.add_scalar('Loss/train', train_loss, batches)
+                    writer.add_scalar('Raw_Loss/train',
+                                      train_raw_loss, batches)
+                    writer.add_scalar('Acc/train', train_acc, batches)
+                    print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                          (epoch, batches, train_acc))
+
+                if batches % 5000 == 0:
+                    save_checkpoint(net, optimizer, batches,
+                                    args.checkpoint_name)
+
+                batches += 1
+
+        val_loss = 0
+        val_correct = 0
+        val_count = 0
+        # Speed up validation by telling torch not to worry about computing gradients
+        with torch.no_grad():
+            for val_batch in val_loader:
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -115,6 +238,9 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
         if writer is not None:
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
+
+        save_checkpoint(net, optimizer, batches,
+                        "{}_final".format(args.checkpoint_name))
 
     return net
 
@@ -148,7 +274,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
     dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device)
 
     batches = 0
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_penalty = 0
@@ -186,10 +312,17 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                     train_acc = train_correct / train_count
 
                     writer.add_scalar('Loss/train', train_loss, batches)
-                    writer.add_scalar('Raw_Loss/train', train_raw_loss, batches)
+                    writer.add_scalar('Raw_Loss/train',
+                                      train_raw_loss, batches)
                     writer.add_scalar('Acc/train', train_acc, batches)
-                batches += 1
+                    print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                          (epoch, batches, train_acc))
 
+                if batches % 5000 == 0:
+                    save_checkpoint(net, optimizer, batches,
+                                    args.checkpoint_name)
+
+                batches += 1
 
         val_loss = 0
         val_correct = 0
@@ -200,7 +333,109 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
                 images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
-                val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+
+                val_count += len(labels)
+
+                with torch.no_grad():
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
+                    val_loss += loss.item()
+                    val_correct += acc
+
+        val_loss = val_loss / val_count
+        val_acc = val_correct / val_count
+
+        if writer is not None:
+            writer.add_scalar('Loss/val', val_loss, epoch)
+            writer.add_scalar('Acc/val', val_acc, epoch)
+
+        save_checkpoint(net, optimizer, batches,
+                        "{}_final".format(args.checkpoint_name))
+
+    return net
+
+
+def save_checkpoint(model, optimizer, batch_num, base_name):
+    checkpoint = {
+        'model': model,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }
+
+    if not os.path.exists('saved_models'):
+        os.makedirs('saved_models')
+
+
+    save_name = "saved_models/{}_{}.pth".format(base_name, batch_num)
+    torch.save(checkpoint, save_name)
+
+
+def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader, writer: SummaryWriter, args: argparse.Namespace, optimizer: optim.Adam):
+    '''adds optimizer argument that is loaded prior'''
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+    # optimizer = optim.Adam(net.parameters(), lr=1e-5)
+    # dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device) # dummy = 1
+    dummy_w = None
+
+    batches = 0
+    print("train loader length {}".format(len(train_loader)))
+    print("Val loader length {}".format(len(val_loader)))
+    for epoch in tqdm(range(int(args.num_epochs))):
+        train_correct = 0
+        train_loss = 0
+        train_count = 0
+
+        for batch in train_loader:
+
+            image, _, cell_type, labels = batch
+            image = image.float().to(device)
+            labels = labels.to(device)
+            cell_type = cell_type.to(
+                device).float().view(-1, cell_type.size(-1))
+            train_count += len(labels)
+
+            optimizer.zero_grad()
+
+            loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
+
+            train_correct += acc
+
+            train_loss += loss.item()
+            loss.backward(retain_graph=False)  # modification here
+            optimizer.step()
+
+            if batches % 100 == 0:
+                train_loss = train_loss / train_count
+                train_acc = train_correct / train_count
+
+                writer.add_scalar('Loss/train', train_loss, batches)
+                writer.add_scalar('Acc/train', train_acc, batches)
+
+                print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                      (epoch, batches, train_acc))
+
+            if batches % 5000 == 0:
+                save_checkpoint(net, optimizer, batches,
+                                "{}_continued".format(args.checkpoint_name))
+
+            batches += 1
+
+        val_loss = 0
+        val_correct = 0
+        val_count = 0
+        # Speed up validation by telling torch not to worry about computing gradients
+
+        with torch.no_grad():
+            print("validation")
+            for val_batch in val_loader:
+                images, _, cell_type, labels = val_batch
+                val_images = images.float().to(device)
+                val_labels = labels.to(device)
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
 
                 val_count += len(labels)
 
@@ -216,6 +451,8 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
+    save_checkpoint(net, optimizer, batches,
+                    "{}_continued_final".format(args.checkpoint_name))
     return net
 
 
@@ -247,7 +484,9 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
     dummy_w = None
 
     batches = 0
-    for epoch in tqdm(range(args.num_epochs)):
+    print("train loader length {}".format(len(train_loader)))
+    print("Val loader length {}".format(len(val_loader)))
+    for epoch in tqdm(range(int(args.num_epochs))):
         train_correct = 0
         train_loss = 0
         train_count = 0
@@ -274,18 +513,27 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
                 writer.add_scalar('Loss/train', train_loss, batches)
                 writer.add_scalar('Acc/train', train_acc, batches)
 
+                print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                      (epoch, batches, train_acc))
+
+            if batches % 5000 == 0:
+                save_checkpoint(net, optimizer, batches, args.checkpoint_name)
+
             batches += 1
 
         val_loss = 0
         val_correct = 0
         val_count = 0
         # Speed up validation by telling torch not to worry about computing gradients
+
         with torch.no_grad():
+            print("validation")
             for val_batch in val_loader:
                 images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
-                val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
 
                 val_count += len(labels)
 
@@ -301,6 +549,8 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             writer.add_scalar('Loss/val', val_loss, epoch)
             writer.add_scalar('Acc/val', val_acc, epoch)
 
+    save_checkpoint(net, optimizer, batches,
+                    "{}_final".format(args.checkpoint_name))
     return net
 
 
@@ -308,8 +558,10 @@ def get_datasets(args: argparse.Namespace,
                  cell_type: str,
                  sirna_encoder: skl.preprocessing.LabelEncoder,
                  sirnas_to_keep: List[int] = None,
-                ):
+                 ):
     '''Generate train and val RecursionDataset objects for a given cell type'''
+    
+
     train_dir = os.path.join(args.data_dir, 'images', 'train')
     dataset = RecursionDataset(os.path.join(args.data_dir, 'rxrx1.csv'),
                                train_dir,
@@ -318,7 +570,7 @@ def get_datasets(args: argparse.Namespace,
                                cell_type,
                                sirnas_to_keep=sirnas_to_keep,
                                args = args
-                              )
+                               )
     data_len = len(dataset)
     train_data, val_data = torch.utils.data.random_split(dataset, (data_len - data_len // 10,
                                                                    data_len // 10
@@ -328,12 +580,123 @@ def get_datasets(args: argparse.Namespace,
     return train_data, val_data
 
 
+def get_est_time():
+    time_format = "%Y-%m-%d.%Hhours_%Mminutes_%Sseconds"
+    current_time = datetime.now(timezone('US/Eastern'))
+    return current_time.strftime(time_format)
+
+
+def load_model_optimizer(model, optimizer, filename):
+    if os.path.isfile(filename):
+        print("Loading file {}".format(filename))
+        checkpoint = torch.load(filename)
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+    else:
+        print("no file found at {}".format(filename))
+
+    return model, optimizer
+
+
+
+def train_baseline(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
+              writer: SummaryWriter, args: argparse.Namespace):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+    optimizer = optim.Adam(net.parameters(), lr=1e-5)
+
+    # dummy_w = torch.nn.Parameter(torch.FloatTensor([1.0])).to(device) # dummy = 1
+    dummy_w = None
+
+    batches = 0
+    print("train loader length {}".format(len(train_loader)))
+    print("Val loader length {}".format(len(val_loader)))
+    for epoch in tqdm(range(int(args.num_epochs))):
+        train_correct = 0
+        train_loss = 0
+        train_count = 0
+
+        for batch in train_loader:
+
+            image, _, cell_type, labels = batch
+            image = image.float().to(device)
+            labels = labels.to(device)
+            cell_type = cell_type.to(
+                device).float().view(-1, cell_type.size(-1))
+            train_count += len(labels)
+
+            optimizer.zero_grad()
+
+            loss, acc = net.train_forward(image, cell_type, labels, dummy_w)
+
+            train_correct += acc
+
+            train_loss += loss.item()
+            loss.backward(retain_graph=False)  # modification here
+            optimizer.step()
+
+            if batches % 100 == 0:
+                train_loss = train_loss / train_count
+                train_acc = train_correct / train_count
+
+                writer.add_scalar('Loss/train', train_loss, batches)
+                writer.add_scalar('Acc/train', train_acc, batches)
+
+                print("Epoch : %d, Batches : %d, train accuracy : %f" %
+                      (epoch, batches, train_acc))
+
+            if batches % 5000 == 0:
+                save_checkpoint(net, optimizer, batches, args.checkpoint_name)
+
+            batches += 1
+
+        val_loss = 0
+        val_correct = 0
+        val_count = 0
+        # Speed up validation by telling torch not to worry about computing gradients
+
+        with torch.no_grad():
+            print("validation")
+            for val_batch in val_loader:
+
+                if (val_count % 100 == 0):
+                    print("val batch {}".format(val_count))
+
+                images, _, cell_type, labels = val_batch
+                val_images = images.float().to(device)
+                val_labels = labels.to(device)
+                val_cell_type = cell_type.to(
+                    device).float().view(-1, cell_type.size(-1))
+
+                val_count += len(labels)
+
+                with torch.no_grad():
+                    loss, acc = net.train_forward(
+                        val_images, val_cell_type, val_labels)
+                    val_loss += loss.item()
+                    val_correct += acc
+
+        val_loss = val_loss / val_count
+        val_acc = val_correct / val_count
+
+        if writer is not None:
+            writer.add_scalar('Loss/val', val_loss, epoch)
+            writer.add_scalar('Acc/val', val_acc, epoch)
+
+    save_checkpoint(net, optimizer, batches,
+                    "{}_final".format(args.checkpoint_name))
+    return net
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', help='The path to the root of the data directory '
                                          '(called rxrx1 by default)')
-    parser.add_argument('--num_epochs', default=100, help='The number of epochs to train')
+    parser.add_argument('model_type')
+    parser.add_argument('train_type')
+    parser.add_argument('checkpoint_name')
+    parser.add_argument('--num_epochs', default=100,
+                        help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
                         'penalty. A larger factor emphasizes classification accuracy over '
@@ -344,7 +707,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Create sirna encoder
-    metadata_df = datasets.load_metadata_df(os.path.join(args.data_dir, 'rxrx1.csv'))
+    metadata_df = datasets.load_metadata_df(
+        os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
     sirnas = sirnas[:50]
@@ -363,10 +727,16 @@ if __name__ == '__main__':
     combined_train_data = ConcatDataset([HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
 
-    HEPG2_train_loader = DataLoader(HEPG2_train_data, batch_size=16, shuffle=True)
-    HUVEC_train_loader = DataLoader(HUVEC_train_data, batch_size=16, shuffle=True)
+    # subset_indices = list(range(0, len(val_data), 100))
+
+    HEPG2_train_loader = DataLoader(
+        HEPG2_train_data, batch_size=16, shuffle=True)
+    HUVEC_train_loader = DataLoader(
+        HUVEC_train_data, batch_size=16, shuffle=True)
     RPE_train_loader = DataLoader(RPE_train_data, batch_size=16, shuffle=True)
-    combined_train_loader = DataLoader(combined_train_data, batch_size=16, shuffle=True)
+    combined_train_loader = DataLoader(
+        combined_train_data, batch_size=16, shuffle=True)
+
     val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
 
     # Create test set
@@ -375,20 +745,58 @@ if __name__ == '__main__':
                                  train_dir,
                                  sirna_encoder,
                                  'train',
-                                 'U2OS'
-                                )
+                                 'U2OS',
+                                 args=args
+                                 )
     U2OS_loader = DataLoader(U2OS_data, batch_size=2, shuffle=False)
 
-
-    # Initialize netork
-    #net = ModelAndLoss(len(sirnas)).to('cuda')
-    #net = DenseNet(len(sirnas)).to('cuda')
-    net = MultitaskNet(len(sirnas)).to('cuda')
-
-    writer = SummaryWriter('logs/erm{}'.format(time.time()))
     loaders = [HEPG2_train_loader, HUVEC_train_loader, RPE_train_loader]
-    #train_erm(net, combined_train_loader, val_loader, writer, args)
-    writer = SummaryWriter('logs/irm{}'.format(time.time()))
-    #train_irm(net, loaders, val_loader, writer, args)
-    writer = SummaryWriter('logs/multitask_{}'.format(time.time()))
-    train_multitask(net, loaders, val_loader, writer, args)
+    est_time = get_est_time()
+
+    net = None
+
+    if (args.model_type == "densenet"):
+        print("you picked densenet")
+        net = DenseNet(len(sirnas)).to('cuda')
+    elif (args.model_type == "kaggle"):
+        print("you picked kaggle")
+        net = ModelAndLoss(len(sirnas)).to('cuda')
+    elif(args.model_type == "multitask"):
+        print("you picked multitask")
+        net = MultitaskNet(len(sirnas)).to('cuda')
+    elif(args.model_type == "lr"):
+        print("you picked lr")
+        net = LogisticRegression(512*512*6, len(sirnas)).to('cuda')
+    elif(args.model_type == "cnn"):
+        print("you picked cnn")
+        net = CNN(len(sirnas)).to('cuda')
+    else:
+        print("invalid model type")
+
+    if (args.train_type == 'erm'):
+        print("training with erm")
+        writer = SummaryWriter('logs/erm{}'.format(est_time))
+        train_erm(net, combined_train_loader, val_loader, writer, args)
+    elif (args.train_type == 'irm'):
+        print("training with irm")
+        writer = SummaryWriter('logs/irm{}'.format(est_time))
+
+        train_irm(net, loaders, val_loader, writer, args)
+    elif (args.train_type == 'multitask'):
+        print("training with multitask")
+        writer = SummaryWriter('logs/multitask_{}'.format(est_time))
+        train_multitask(net, loaders, val_loader, writer, args)
+    elif (args.train_type == 'baseline'):
+        print("training with baseline")
+        writer = SummaryWriter('logs/baseline_{}'.format(est_time))
+        train_baseline(net, combined_train_loader, val_loader, writer, args)
+    else:
+        print("invalid train type")
+
+    print("save final net")
+    checkpoint = {
+        'state_dict': net.state_dict(),
+    }
+
+    save_name = "saved_models/{}_finished.pth".format(args.checkpoint_name)
+    torch.save(checkpoint, save_name)

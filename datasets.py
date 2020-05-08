@@ -24,6 +24,8 @@ class RecursionDataset(Dataset):
         self.sirna_encoder = sirna_encoder
         self.args = args
 
+        
+
         csv_path = csv_path.rstrip('/')
         if not os.path.exists(csv_path):
             print('Path {} does not exist'.format(csv_path))
