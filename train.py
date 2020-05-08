@@ -71,7 +71,7 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
         train_count = 0
         for env_loader in train_loaders:
             for batch in env_loader:
-                image, cell_type, labels = batch
+                image, _, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
                 cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -107,7 +107,7 @@ def train_multitask(net: nn.Module, train_loaders: List[DataLoader], val_loader:
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(
@@ -170,7 +170,7 @@ def train_irm_load(net: nn.Module, train_loaders: List[DataLoader], val_loader: 
         train_count = 0
         for env_loader in train_loaders:
             for batch in env_loader:
-                image, cell_type, labels = batch
+                image, _, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
                 cell_type = cell_type.to(
@@ -220,7 +220,7 @@ def train_irm_load(net: nn.Module, train_loaders: List[DataLoader], val_loader: 
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -282,7 +282,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         train_count = 0
         for env_loader in train_loaders:
             for batch in env_loader:
-                image, cell_type, labels = batch
+                image, _, cell_type, labels = batch
                 image = image.float().to(device)
                 labels = labels.to(device)
                 cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -330,7 +330,7 @@ def train_irm(net: nn.Module, train_loaders: List[DataLoader], val_loader: DataL
         # Speed up validation by telling torch not to worry about computing gradients
         with torch.no_grad():
             for val_batch in val_loader:
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(
@@ -390,7 +390,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
 
         for batch in train_loader:
 
-            image, cell_type, labels = batch
+            image, _, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
             cell_type = cell_type.to(
@@ -431,11 +431,7 @@ def train_erm_load_optimizer(net: nn.Module, train_loader: DataLoader, val_loade
         with torch.no_grad():
             print("validation")
             for val_batch in val_loader:
-
-                if (val_count % 100 == 0):
-                    print("val batch {}".format(val_count))
-
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(
@@ -495,7 +491,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         train_loss = 0
         train_count = 0
         for batch in train_loader:
-            image, cell_type, labels = batch
+            image, _, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
             cell_type = cell_type.to(device).float().view(-1, cell_type.size(-1))
@@ -533,11 +529,7 @@ def train_erm(net: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         with torch.no_grad():
             print("validation")
             for val_batch in val_loader:
-
-                if (val_count % 100 == 0):
-                    print("val batch {}".format(val_count))
-
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(
@@ -577,15 +569,13 @@ def get_datasets(args: argparse.Namespace,
                                'train',
                                cell_type,
                                sirnas_to_keep=sirnas_to_keep,
-                               args=args
+                               args = args
                                )
     data_len = len(dataset)
     train_data, val_data = torch.utils.data.random_split(dataset, (data_len - data_len // 10,
                                                                    data_len // 10
-                                                                   )
-                                                         )
-
-    print(len(train_data), len(val_data))
+                                                                  )
+                                                        )
 
     return train_data, val_data
 
@@ -628,7 +618,7 @@ def train_baseline(net: nn.Module, train_loader: DataLoader, val_loader: DataLoa
 
         for batch in train_loader:
 
-            image, cell_type, labels = batch
+            image, _, cell_type, labels = batch
             image = image.float().to(device)
             labels = labels.to(device)
             cell_type = cell_type.to(
@@ -672,7 +662,7 @@ def train_baseline(net: nn.Module, train_loader: DataLoader, val_loader: DataLoa
                 if (val_count % 100 == 0):
                     print("val batch {}".format(val_count))
 
-                images, cell_type, labels = val_batch
+                images, _, cell_type, labels = val_batch
                 val_images = images.float().to(device)
                 val_labels = labels.to(device)
                 val_cell_type = cell_type.to(
@@ -705,16 +695,15 @@ if __name__ == '__main__':
     parser.add_argument('model_type')
     parser.add_argument('train_type')
     parser.add_argument('checkpoint_name')
-    parser.add_argument('normalization',
-                        help = 'Define normalization across a \'plate\', \'experiment\', or as none.'
-                        '.csv with normalization values must be added to the data folder.')
     parser.add_argument('--num_epochs', default=100,
                         help='The number of epochs to train')
     parser.add_argument('--loss_scaling_factor', default=1,
                         help='The factor the loss is multiplied by before being added to the IRM '
                         'penalty. A larger factor emphasizes classification accuracy over '
                         'consistency across environments.')
-
+    parser.add_argument('--normalization', default = None,
+                        help = 'Define normalization across a \'plate\', \'experiment\', or as none.'
+                        '.csv with normalization values must be added to the data folder.')
     args = parser.parse_args()
 
     # Create sirna encoder
@@ -722,29 +711,20 @@ if __name__ == '__main__':
         os.path.join(args.data_dir, 'rxrx1.csv'))
 
     sirnas = metadata_df['sirna'].unique()
-
     sirnas = sirnas[:50]
 
     control_sirnas = ['s501309', 's501357', 's24587', 's2947', 's13580', 's1998', 's3887', 's502431', 's8645', 's501392', 's501323', 's12279', 's1174', 's7128', 's14729',
                       's15652', 's501295', 's501342', 'EMPTY', 's501307', 's194768', 's502432', 's4165', 's15788', 's18582', 's14484', 's5459', 's501351', 's501339', 'n337250', 's35651']
-    control_sirnas_array = np.array(control_sirnas)
-    sirnas = np.append(sirnas, control_sirnas_array)
-    sirnas = np.unique(sirnas)
-    
+    merged_sirnas_list = list(set(sirnas.tolist() + control_sirnas))
+    sirnas = np.array(merged_sirnas_list)
 
     sirna_encoder = skl.preprocessing.LabelEncoder()
     sirna_encoder.fit(sirnas)
 
-
-
-    HEPG2_train_data, HEPG2_val_data = get_datasets(
-        args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
-    HUVEC_train_data, HUVEC_val_data = get_datasets(
-        args, 'HUVEC', sirna_encoder, sirnas_to_keep=sirnas)
-    RPE_train_data, RPE_val_data = get_datasets(
-        args, 'RPE', sirna_encoder, sirnas_to_keep=sirnas)
-    combined_train_data = ConcatDataset(
-        [HEPG2_train_data, HUVEC_train_data, RPE_train_data])
+    HEPG2_train_data, HEPG2_val_data = get_datasets(args, 'HEPG2', sirna_encoder, sirnas_to_keep=sirnas)
+    HUVEC_train_data, HUVEC_val_data = get_datasets(args, 'HUVEC', sirna_encoder, sirnas_to_keep=sirnas)
+    RPE_train_data, RPE_val_data = get_datasets(args, 'RPE', sirna_encoder, sirnas_to_keep=sirnas)
+    combined_train_data = ConcatDataset([HEPG2_train_data, HUVEC_train_data, RPE_train_data])
     val_data = ConcatDataset([HEPG2_val_data, HUVEC_val_data, RPE_val_data])
 
     # subset_indices = list(range(0, len(val_data), 100))
